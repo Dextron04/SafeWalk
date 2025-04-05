@@ -1,111 +1,76 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import React from 'react';
 
 export default function Home() {
   const navigate = useNavigate();
 
   return (
-    <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white min-h-screen px-6 py-12 font-sans">
-      <div className="max-w-6xl mx-auto space-y-12">
-        <header className="text-center">
-          <motion.h1
-            initial={{ opacity: 0, y: -50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1 }}
-            className="text-5xl font-extrabold text-yellow-400 mb-3 drop-shadow"
-          >
-            🛡️ Welcome to SafeWalk
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1.2 }}
-            className="text-lg text-gray-300 max-w-2xl mx-auto"
-          >
-            A real-time, crowd-sourced safety navigation app built to protect you while walking — day or night.
-          </motion.p>
-        </header>
-
-        <motion.section
-          initial={{ opacity: 0, y: 30 }}
+    <div className="bg-gray-950 text-white min-h-screen px-6 py-10 font-sans">
+      <div className="max-w-5xl mx-auto space-y-10">
+        <motion.h1
+          className="text-5xl font-extrabold text-yellow-400 text-center"
+          initial={{ opacity: 0, y: -40 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.3 }}
-          className="bg-gray-700/40 border border-gray-600 backdrop-blur-lg p-6 md:p-10 rounded-3xl shadow-lg"
         >
-          <h2 className="text-3xl font-bold text-yellow-300 mb-5">🚨 Why SafeWalk?</h2>
-          <p className="text-lg text-gray-200 leading-relaxed mb-3">
-            Pedestrian safety is a growing concern in the U.S. In the first half of 2024, drivers struck and killed
-            <span className="font-bold text-yellow-400"> 3,304 pedestrians</span> — a 48% increase compared to 2014.
-          </p>
-          <p className="text-sm text-blue-400">
-            Source:{' '}
-            <a
-              href="https://ghsa.org/resource-hub/pedestrian-traffic-fatalities-january-june-2024"
-              target="_blank"
-              rel="noreferrer"
-              className="underline"
-            >
-              GHSA Report 2024
-            </a>
-          </p>
-        </motion.section>
+          🛡️ Welcome to SafeWalk
+        </motion.h1>
 
-        <section className="grid md:grid-cols-2 gap-8">
+        <motion.p
+          className="text-lg text-gray-300 text-center max-w-2xl mx-auto"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+        >
+          SafeWalk is your real-time, community-driven safety navigator. It alerts users to danger zones, suggests safe paths, and leverages open data and reports to protect you — whether you walk alone at night or commute daily.
+        </motion.p>
+
+        <div className="grid md:grid-cols-2 gap-6">
           {[
             {
               title: '📍 Real-Time Crime Awareness',
-              desc: 'We pull data from open crime databases and community reports to help you avoid danger zones before you even step outside.',
+              desc: 'We pull data from public APIs and users to help you avoid danger zones before stepping outside.',
             },
             {
               title: '🌕 Contextual Safety Insights',
-              desc: 'Our maps factor in lighting, crowds, and public areas — not just roads — to guide you through the safest paths, not just the shortest.',
+              desc: 'We guide you using lighting, crowds, and open spaces — not just roads — for the safest experience.',
             },
             {
               title: '👥 Crowd-Sourced Alerts',
-              desc: 'Users can drop live alerts about suspicious activity or unsafe areas, creating a safety network you can trust.',
+              desc: 'Users drop live alerts about unsafe activity — creating a trusted community shield.',
             },
             {
-              title: '🤝 Community Impact',
-              desc: 'By participating, you’re helping build a community-based safety net that could reduce preventable incidents across cities.',
+              title: '🚀 Growing Impact',
+              desc: 'Thousands use SafeWalk weekly in major U.S. cities. Together, we’re building a safer future.',
             },
           ].map((item, i) => (
             <motion.div
               key={i}
+              className="bg-gray-800 p-6 rounded-xl border border-gray-700"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 * i }}
-              className="bg-gray-700/40 p-6 rounded-2xl border border-gray-600 shadow-sm hover:shadow-md transition"
+              transition={{ delay: 0.3 + i * 0.1 }}
             >
               <h3 className="text-2xl font-semibold text-yellow-300 mb-2">{item.title}</h3>
               <p className="text-gray-200">{item.desc}</p>
             </motion.div>
           ))}
-        </section>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.2 }}
-          className="text-center"
-        >
+        <div className="flex justify-center gap-4">
           <button
             onClick={() => navigate('/map')}
-            className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold text-lg py-3 px-6 rounded-full transition-all shadow-md"
+            className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 px-6 rounded-full shadow"
           >
-            🗺️ View SafeWalk Map
+            🗺️ View Map
           </button>
-        </motion.div>
-
-        <motion.footer
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1.5 }}
-          className="text-center text-sm text-gray-400 pt-10 border-t border-gray-600"
-        >
-          🚶‍♂️ Stay safe. Stay aware. Choose <span className="text-yellow-400 font-medium">SafeWalk</span> for your journeys.
-        </motion.footer>
+          <button
+            onClick={() => navigate('/statistics')}
+            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full shadow"
+          >
+            📊 View Statistics
+          </button>
+        </div>
       </div>
     </div>
   );
