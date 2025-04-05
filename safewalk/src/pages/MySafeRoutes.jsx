@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import AlertsFeed from '../components/AlertsFeed';
+import RouteAssistant from '../components/RouteAssistant';
 
 // Fix for Leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -10,6 +11,16 @@ L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// Custom marker icon for incidents
+const incidentIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
 });
 
 // Route colors for different routes
@@ -28,6 +39,113 @@ function MapController({ userLocation }) {
   return null;
 }
 
+// Component to display alerts along a route
+function RouteAlerts({ route }) {
+  const [routeAlerts, setRouteAlerts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const map = useMap();
+
+  // Get priority color
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'A': return 'bg-red-500'; // Highest priority
+      case 'B': return 'bg-orange-500';
+      case 'C': return 'bg-yellow-500';
+      case 'D': return 'bg-blue-500';
+      case 'E': return 'bg-green-500'; // Lowest priority
+      default: return 'bg-gray-500';
+    }
+  };
+
+  // Sample points along the route and fetch alerts
+  useEffect(() => {
+    const fetchRouteAlerts = async () => {
+      if (!route || route.path.length === 0) return;
+
+      setLoading(true);
+
+      try {
+        // Sample points along the route (every 5th point)
+        const sampledPoints = route.path.filter((_, index) => index);
+
+        // Fetch 911 calls from our server API
+        const response = await fetch(
+          `http://localhost:5000/api/911calls?format=calls`,
+          {
+            headers: {
+              'Accept': 'application/json',
+            }
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch 911 calls');
+        }
+
+        const data = await response.json();
+        console.log(`Fetched ${data.totalCalls} 911 calls for route analysis`);
+
+        // Filter alerts that are within 0.2 miles of any sampled point
+        const nearbyAlerts = data.calls.filter(alert => {
+          // Check if alert is within 0.2 miles of any sampled point
+          return sampledPoints.some(point => {
+            const distance = map.distance(
+              [point[0], point[1]],
+              [alert.latitude, alert.longitude]
+            );
+            // 0.2 miles = 321.869 meters
+            return distance <= 321.869;
+          });
+        });
+
+        console.log(`Found ${nearbyAlerts.length} 911 calls along the route`);
+        setRouteAlerts(nearbyAlerts);
+      } catch (err) {
+        console.error('Error fetching route alerts:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRouteAlerts();
+
+    // Set up polling to refresh data every 2 minutes
+    const intervalId = setInterval(fetchRouteAlerts, 120 * 1000);
+
+    return () => clearInterval(intervalId);
+  }, [route, map]);
+
+  if (loading) return null;
+
+  return (
+    <>
+      {routeAlerts.map(alert => (
+        <Marker
+          key={alert.id}
+          position={[alert.latitude, alert.longitude]}
+          icon={incidentIcon}
+        >
+          <Popup>
+            <div className="p-2">
+              <h3 className="font-bold text-red-500">{alert.callType}</h3>
+              <p className="text-sm">{alert.location}</p>
+              <p className="text-xs text-gray-500">{alert.time}</p>
+              <div className="text-xs mt-1">
+                <p><span className="font-semibold">Priority:</span> <span className={`inline-block w-3 h-3 rounded-full mr-1 ${getPriorityColor(alert.priority)}`}></span> {alert.priority}</p>
+                <p><span className="font-semibold">Agency:</span> {alert.agency}</p>
+                {alert.sensitive && <p className="text-red-500 font-semibold">Sensitive Call</p>}
+              </div>
+              {alert.isFuture && (
+                <p className="text-xs text-yellow-500 mt-1 italic">Note: This is test data with a future date</p>
+              )}
+            </div>
+          </Popup>
+        </Marker>
+      ))}
+    </>
+  );
+}
+
 export default function MySafeRoutes() {
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
@@ -40,6 +158,9 @@ export default function MySafeRoutes() {
   const [userLocation, setUserLocation] = useState(null);
   const [locationError, setLocationError] = useState(null);
   const [showAlerts, setShowAlerts] = useState(true);
+  const [showRouteAlerts, setShowRouteAlerts] = useState(true);
+  const [expandedRouteIndex, setExpandedRouteIndex] = useState(null);
+  const [routeAlerts, setRouteAlerts] = useState([]);
 
   // Refs for Google Places Autocomplete
   const originInputRef = useRef(null);
@@ -244,7 +365,67 @@ export default function MySafeRoutes() {
 
   const handleRouteSelect = (index) => {
     setSelectedRouteIndex(index);
+    setExpandedRouteIndex(index);
   };
+
+  const toggleRouteExpansion = (index) => {
+    setExpandedRouteIndex(expandedRouteIndex === index ? null : index);
+  };
+
+  // Function to fetch route alerts
+  const fetchRouteAlerts = async (route) => {
+    if (!route || !route.path || route.path.length === 0) return;
+
+    try {
+      // Sample points along the route (every 5th point)
+      const sampledPoints = route.path.filter((_, index) => index % 5 === 0);
+
+      // Fetch 911 calls from our server API
+      const response = await fetch(
+        `http://localhost:5000/api/911calls?format=calls`,
+        {
+          headers: {
+            'Accept': 'application/json',
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch 911 calls');
+      }
+
+      const data = await response.json();
+      console.log(`Fetched ${data.totalCalls} 911 calls for route analysis`);
+
+      // Filter alerts that are within 0.2 miles of any sampled point
+      const map = document.querySelector('.leaflet-container')?._leaflet_map;
+      if (!map) return;
+
+      const nearbyAlerts = data.calls.filter(alert => {
+        // Check if alert is within 0.2 miles of any sampled point
+        return sampledPoints.some(point => {
+          const distance = map.distance(
+            [point[0], point[1]],
+            [alert.latitude, alert.longitude]
+          );
+          // 0.2 miles = 321.869 meters
+          return distance <= 321.869;
+        });
+      });
+
+      console.log(`Found ${nearbyAlerts.length} 911 calls along the route`);
+      setRouteAlerts(nearbyAlerts);
+    } catch (err) {
+      console.error('Error fetching route alerts:', err);
+    }
+  };
+
+  // Update route alerts when selected route changes
+  useEffect(() => {
+    if (routes.length > 0 && showRouteAlerts) {
+      fetchRouteAlerts(routes[selectedRouteIndex]);
+    }
+  }, [selectedRouteIndex, routes, showRouteAlerts]);
 
   return (
     <div className="bg-gray-950 text-white min-h-screen p-6">
@@ -280,61 +461,73 @@ export default function MySafeRoutes() {
             {routes.length > 0 && (
               <div className="mb-6">
                 <h2 className="text-xl font-semibold text-yellow-400 mb-3">Available Routes</h2>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-col gap-3">
                   {routes.map((route, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleRouteSelect(index)}
-                      className={`px-4 py-2 rounded-lg flex items-center ${selectedRouteIndex === index
-                        ? 'bg-yellow-400 text-black font-bold'
-                        : 'bg-gray-800 text-white'
-                        }`}
-                    >
+                    <div key={index} className="bg-gray-800 rounded-lg overflow-hidden">
                       <div
-                        className="w-4 h-4 rounded-full mr-2"
-                        style={{ backgroundColor: ROUTE_COLORS[index % ROUTE_COLORS.length] }}
-                      ></div>
-                      <span>Route {index + 1}</span>
-                      <span className="ml-2 text-sm">
-                        ({route.distance} • {route.duration})
-                      </span>
-                    </button>
+                        className="p-4 flex items-center justify-between cursor-pointer"
+                        onClick={() => toggleRouteExpansion(index)}
+                      >
+                        <div className="flex items-center">
+                          <div
+                            className="w-4 h-4 rounded-full mr-2"
+                            style={{ backgroundColor: ROUTE_COLORS[index % ROUTE_COLORS.length] }}
+                          ></div>
+                          <span className="font-medium">Route {index + 1}</span>
+                          <span className="ml-2 text-sm text-gray-400">
+                            ({route.distance} • {route.duration})
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRouteSelect(index);
+                            }}
+                            className={`px-3 py-1 rounded-lg mr-2 ${selectedRouteIndex === index
+                              ? 'bg-yellow-400 text-black font-bold'
+                              : 'bg-gray-700 text-white'
+                              }`}
+                          >
+                            Select
+                          </button>
+                          <span className="text-gray-400">
+                            {expandedRouteIndex === index ? '▼' : '▶'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {expandedRouteIndex === index && (
+                        <div className="p-4 border-t border-gray-700">
+                          {route.warnings.length > 0 && (
+                            <div className="bg-yellow-900 text-yellow-200 p-3 rounded-lg mb-4">
+                              <h3 className="font-semibold">Warnings:</h3>
+                              <ul className="list-disc pl-4">
+                                {route.warnings.map((warning, idx) => (
+                                  <li key={idx}>{warning}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          <div className="space-y-2">
+                            {route.steps.map((step, idx) => (
+                              <div key={idx} className="bg-gray-700 p-3 rounded-lg">
+                                <p className="text-sm text-gray-200 mb-1">
+                                  <strong>{step.index}.</strong>{" "}
+                                  <span dangerouslySetInnerHTML={{ __html: step.instruction }} />
+                                </p>
+                                <div className="text-xs text-gray-400 mt-1">
+                                  Distance: {step.distance} • Duration: {step.duration}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {routes.length > 0 && (
-              <div className="space-y-4 mb-6">
-                <h2 className="text-xl font-semibold text-yellow-400">
-                  Route {selectedRouteIndex + 1} Instructions
-                  <span className="text-sm font-normal ml-2">
-                    ({routes[selectedRouteIndex].distance} • {routes[selectedRouteIndex].duration})
-                  </span>
-                </h2>
-
-                {routes[selectedRouteIndex].warnings.length > 0 && (
-                  <div className="bg-yellow-900 text-yellow-200 p-3 rounded-lg mb-4">
-                    <h3 className="font-semibold">Warnings:</h3>
-                    <ul className="list-disc pl-4">
-                      {routes[selectedRouteIndex].warnings.map((warning, idx) => (
-                        <li key={idx}>{warning}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {routes[selectedRouteIndex].steps.map((step, idx) => (
-                  <div key={idx} className="bg-gray-800 p-4 rounded-lg">
-                    <p className="text-sm text-gray-200 mb-1">
-                      <strong>{step.index}.</strong>{" "}
-                      <span dangerouslySetInnerHTML={{ __html: step.instruction }} />
-                    </p>
-                    <div className="text-xs text-gray-400 mt-1">
-                      Distance: {step.distance} • Duration: {step.duration}
-                    </div>
-                  </div>
-                ))}
               </div>
             )}
 
@@ -385,6 +578,10 @@ export default function MySafeRoutes() {
                 {showAlerts && userLocation && (
                   <AlertsFeed userLocation={userLocation} />
                 )}
+
+                {showRouteAlerts && routes.length > 0 && (
+                  <RouteAlerts route={routes[selectedRouteIndex]} />
+                )}
               </MapContainer>
             </div>
           </div>
@@ -416,6 +613,36 @@ export default function MySafeRoutes() {
                 <p className="text-gray-300">Enable location services to see nearby alerts.</p>
               )}
             </div>
+
+            {routes.length > 0 && (
+              <div className="bg-gray-800 p-4 rounded-lg mt-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold text-yellow-400">Route Alerts</h2>
+                  <button
+                    onClick={() => setShowRouteAlerts(!showRouteAlerts)}
+                    className="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded"
+                  >
+                    {showRouteAlerts ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                <p className="text-gray-300">
+                  Shows 911 calls within 0.2 miles of points along your selected route.
+                </p>
+              </div>
+            )}
+
+            {routes.length > 0 && (
+              <div className="mt-4">
+                <RouteAssistant
+                  selectedRoute={routes[selectedRouteIndex]}
+                  routeAlerts={routeAlerts}
+                  userLocation={userLocation}
+                  startLocation={startLocation}
+                  endLocation={endLocation}
+                  expandedRouteIndex={expandedRouteIndex}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

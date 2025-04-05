@@ -232,5 +232,197 @@ app.get('/api/911calls', async (req, res) => {
   }
 });
 
+// Route Assistant endpoint using Google Gemini
+app.post('/api/route-assistant', async (req, res) => {
+  const { selectedRoute, allRoutes, routeAlerts, userLocation, startLocation, endLocation, userQuery } = req.body;
+
+  console.log("all routes data: ", allRoutes);
+
+
+  if (!selectedRoute || !userQuery) {
+    return res.status(400).json({ error: 'Route and user query are required' });
+  }
+
+  try {
+    // Create a detailed context for the AI
+    let routeDetails = `Selected Route: ${selectedRoute.distance}, ${selectedRoute.duration}`;
+
+    if (selectedRoute.summary) {
+      routeDetails += `\nRoute Summary: ${selectedRoute.summary}`;
+    }
+
+    if (selectedRoute.warnings && selectedRoute.warnings.length > 0) {
+      routeDetails += `\nWarnings: ${selectedRoute.warnings.join(', ')}`;
+    }
+
+    if (selectedRoute.steps && selectedRoute.steps.length > 0) {
+      routeDetails += `\n\nRoute Steps:\n${selectedRoute.steps.map((step, index) =>
+        `${index + 1}. ${step.instruction} (${step.distance})`
+      ).join('\n')}`;
+    }
+
+    // Add information about alternative routes
+    let alternativeRoutesInfo = '';
+    if (allRoutes && allRoutes.length > 1) {
+      alternativeRoutesInfo = `\n\nAlternative Routes Available:\n${allRoutes.map((route, index) =>
+        `Route ${index + 1}: ${route.distance}, ${route.duration}${route.warnings && route.warnings.length > 0 ? ` (Warnings: ${route.warnings.join(', ')})` : ''}`
+      ).join('\n')}`;
+    }
+
+    // Add detailed information about 911 calls within 0.2 mile radius from the past 24 hours
+    let alertsInfo = '';
+    if (routeAlerts && routeAlerts.length > 0) {
+      // Group alerts by type
+      const alertsByType = {};
+      routeAlerts.forEach(alert => {
+        const type = alert.callType || alert.description || 'Unknown';
+        if (!alertsByType[type]) {
+          alertsByType[type] = [];
+        }
+        alertsByType[type].push(alert);
+      });
+
+      // Create a summary of alert types
+      const alertTypeSummary = Object.entries(alertsByType)
+        .map(([type, alerts]) => `${type}: ${alerts.length} reports`)
+        .join(', ');
+
+      alertsInfo = `\n\n911 Reports Within 0.2 Mile Radius (Past 24 Hours):\n`;
+      alertsInfo += `Total Reports: ${routeAlerts.length}\n`;
+      alertsInfo += `Report Types: ${alertTypeSummary}\n\n`;
+
+      // Add detailed information about each alert
+      alertsInfo += `Detailed 911 Reports:\n${routeAlerts.map((alert, index) => {
+        const timeInfo = alert.time ? `Time: ${alert.time}` : '';
+        const locationInfo = alert.location ? `Location: ${alert.location}` : '';
+        const typeInfo = alert.callType ? `Type: ${alert.callType}` : '';
+        const descriptionInfo = alert.description && alert.description !== alert.callType ? `Description: ${alert.description}` : '';
+        const distanceInfo = alert.distance ? `Distance from route: ${alert.distance}` : '';
+
+        return `${index + 1}. ${[typeInfo, timeInfo, locationInfo, distanceInfo, descriptionInfo]
+          .filter(Boolean)
+          .join(' | ')}`;
+      }).join('\n')}`;
+    } else {
+      alertsInfo = '\n\nNo 911 reports within 0.2 mile radius of this route in the past 24 hours.';
+    }
+
+    // Add location information
+    let locationInfo = '';
+    if (startLocation) {
+      locationInfo += `\nStart Location: ${startLocation.address || `lat: ${startLocation.lat}, lng: ${startLocation.lng}`}`;
+    }
+    if (endLocation) {
+      locationInfo += `\nEnd Location: ${endLocation.address || `lat: ${endLocation.lat}, lng: ${endLocation.lng}`}`;
+    }
+    if (userLocation) {
+      locationInfo += `\nUser Current Location: lat: ${userLocation.lat}, lng: ${userLocation.lng}`;
+    }
+
+    // Prepare the prompt for Gemini
+    let prompt = `You are a friendly and helpful navigation assistant for SafeWalk, a safety-focused navigation app in San Francisco. 
+    
+You're having a conversation with a user who is planning a journey from ${startLocation?.address || 'their starting point'} to ${endLocation?.address || 'their destination'}.
+
+${routeDetails}
+${alternativeRoutesInfo}
+${alertsInfo}
+${locationInfo}
+
+User query: "${userQuery}"
+
+Respond in a conversational, friendly manner as if you're having a chat with the user. Don't just summarize information - engage with them directly. Ask follow-up questions when appropriate, show empathy, and provide personalized advice based on their specific situation.
+
+If the user is asking about route alternatives or safety, compare the available routes and recommend the safest option based on the information provided. Consider factors like distance, duration, and proximity to 911 calls.
+
+When discussing 911 reports, focus on incidents within the 0.2 mile radius of the route from the past 24 hours. Provide specific details about:
+- The number and types of reports in this immediate vicinity
+- When the reports occurred throughout the day (morning, afternoon, evening, night)
+- Where the reports are located relative to the route
+- Any patterns or clusters of reports that might indicate higher-risk areas
+- Safety recommendations based on the report data
+
+You can answer questions about:
+- Route details and directions
+- Safety concerns and nearby 911 reports
+- Alternative route options
+- Estimated travel time and distance
+- Specific locations along the route
+- Navigation assistance
+- Any other aspects of the journey
+
+IMPORTANT: Format your response using Markdown syntax. Use headings, bullet points, bold text, and other Markdown elements to make your response clear and readable.`;
+
+    console.log('Sending request to Gemini API with prompt:', prompt.substring(0, 100) + '...');
+
+    // Call Google Gemini API
+    const response = await axios.post(
+      'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent',
+      {
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        },
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_HARASSMENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_HATE_SPEECH",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          }
+        ]
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': process.env.GOOGLE_GEMINI_API_KEY
+        }
+      }
+    );
+
+    console.log('Received response from Gemini API:', JSON.stringify(response.data).substring(0, 200) + '...');
+
+    // Check if the response has the expected structure
+    if (!response.data || !response.data.candidates || !response.data.candidates[0] || !response.data.candidates[0].content || !response.data.candidates[0].content.parts || !response.data.candidates[0].content.parts[0]) {
+      console.error('Invalid response format from Gemini API:', JSON.stringify(response.data));
+      throw new Error('Invalid response format from Gemini API');
+    }
+
+    // Extract the response text
+    const responseText = response.data.candidates[0].content.parts[0].text;
+    console.log('Extracted response text:', responseText.substring(0, 100) + '...');
+
+    res.json({ response: responseText });
+  } catch (error) {
+    console.error('Error getting response from Gemini:', error);
+    console.error('Error details:', error.response ? JSON.stringify(error.response.data) : 'No response data');
+    res.status(500).json({
+      error: 'Failed to get response from assistant',
+      details: error.message
+    });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`SafeWalk API server running on http://localhost:${PORT}`));
