@@ -4,6 +4,10 @@ import Navbar from './components/Navbar';
 import Home from './pages/home';
 import MapView from './components/mapview';
 import Statics from './pages/statics';
+import HelpCenter from './pages/HelpCenter';
+import AlertFeed from './pages/AlertFeed';
+import MySR from './pages/MySafeRoutes';
+import Feedback from './components/Feedback';
 
 export default function App() {
   return (
@@ -13,6 +17,10 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/map" element={<MapView />} />
         <Route path="/statistics" element={<Statics />} />
+        <Route path="/help" element={<HelpCenter />} />
+        <Route path="/alerts" element={<AlertFeed />} />
+        <Route path="/routes" element={<MySR />} />
+        <Route path="/feedback" element={<Feedback />} />
       </Routes>
     </>
   );
