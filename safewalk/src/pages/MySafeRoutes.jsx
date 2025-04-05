@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+
 
 // Fix for Leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -22,7 +23,77 @@ export default function SafeTransitRouteFinder() {
   const [loading, setLoading] = useState(false);
   const [startLocation, setStartLocation] = useState(null);
   const [endLocation, setEndLocation] = useState(null);
-  const [mapCenter, setMapCenter] = useState([37.7749, -122.4194]); // Default to SF
+  const [mapCenter, setMapCenter] = useState([37.7749, -122.4194]); // Default center to SF
+
+  // Refs for Google Places Autocomplete
+  const originInputRef = useRef(null);
+  const destinationInputRef = useRef(null);
+  const originAutocompleteRef = useRef(null);
+  const destinationAutocompleteRef = useRef(null);
+
+  useEffect(() => {
+    // Load Google Maps JavaScript API with Places library
+    const loadGoogleMapsScript = () => {
+      if (window.google && window.google.maps && window.google.maps.places) {
+        initAutocomplete();
+      } else {
+        const script = document.createElement('script');
+        // Use a direct API key value
+        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyAbhHlHyUaD3PLPfLolagQWQrcfeZO4fHA&libraries=places`;
+        script.async = true;
+        script.defer = true;
+        script.onload = initAutocomplete;
+        document.head.appendChild(script);
+      }
+    };
+
+    loadGoogleMapsScript();
+
+    // Cleanup can be added here if necessary on unmount.
+  }, []);
+
+  const initAutocomplete = () => {
+    if (!window.google || !window.google.maps || !window.google.maps.places) {
+      console.error('Google Maps API not loaded');
+      return;
+    }
+
+    // Initialize origin autocomplete
+    if (originInputRef.current) {
+      originAutocompleteRef.current = new window.google.maps.places.Autocomplete(
+        originInputRef.current,
+        {
+          componentRestrictions: { country: 'us' },
+          fields: ['address_components', 'geometry', 'formatted_address'],
+          types: ['geocode'], // Use a single type to avoid the error
+        }
+      );
+      originAutocompleteRef.current.addListener('place_changed', () => {
+        const place = originAutocompleteRef.current.getPlace();
+        if (place.formatted_address) {
+          setOrigin(place.formatted_address);
+        }
+      });
+    }
+
+    // Initialize destination autocomplete
+    if (destinationInputRef.current) {
+      destinationAutocompleteRef.current = new window.google.maps.places.Autocomplete(
+        destinationInputRef.current,
+        {
+          componentRestrictions: { country: 'us' },
+          fields: ['address_components', 'geometry', 'formatted_address'],
+          types: ['geocode'], // Use a single type to avoid the error
+        }
+      );
+      destinationAutocompleteRef.current.addListener('place_changed', () => {
+        const place = destinationAutocompleteRef.current.getPlace();
+        if (place.formatted_address) {
+          setDestination(place.formatted_address);
+        }
+      });
+    }
+  };
 
   const handleFindRoute = async (e) => {
     e.preventDefault();
@@ -76,7 +147,7 @@ export default function SafeTransitRouteFinder() {
       setStartLocation(data.routes[0].legs[0].start_location);
       setEndLocation(data.routes[0].legs[0].end_location);
 
-      // Center the map on the route
+      // Center the map on the route bounds
       const bounds = data.routes[0].bounds;
       const center = [
         (bounds.northeast.lat + bounds.southwest.lat) / 2,
@@ -95,6 +166,7 @@ export default function SafeTransitRouteFinder() {
     }
   };
 
+  // Decodes an encoded polyline string into an array of [lat, lng] coordinates.
   const decodePolyline = (encoded) => {
     let points = [];
     let index = 0, lat = 0, lng = 0;
@@ -136,6 +208,7 @@ export default function SafeTransitRouteFinder() {
 
         <form onSubmit={handleFindRoute} className="flex flex-col md:flex-row gap-4 mb-6">
           <input
+            ref={originInputRef}
             type="text"
             placeholder="Start Location"
             value={origin}
@@ -144,6 +217,7 @@ export default function SafeTransitRouteFinder() {
             required
           />
           <input
+            ref={destinationInputRef}
             type="text"
             placeholder="Destination"
             value={destination}
@@ -222,14 +296,13 @@ export default function SafeTransitRouteFinder() {
             center={mapCenter}
             zoom={13}
             className="h-full w-full z-0"
-            key={mapCenter.join(',')} // Force re-render when center changes
+            key={mapCenter.join(',')}
           >
             <TileLayer
               attribution="&copy; OpenStreetMap contributors"
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
-            {/* Display all routes with different colors */}
             {routes.map((route, index) => (
               <Polyline
                 key={index}
