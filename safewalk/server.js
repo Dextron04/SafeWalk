@@ -29,7 +29,8 @@ app.post('/api/directions', async (req, res) => {
       params: {
         origin,
         destination,
-        mode: 'driving',
+        alternatives: true,
+        mode: 'walking',
         key: GOOGLE_API_KEY
       }
     });
