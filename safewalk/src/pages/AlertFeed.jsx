@@ -34,99 +34,101 @@ export default function AlertFeed() {
     return () => clearInterval(locationInterval);
   }, []);
 
-  // Fetch incidents from the SFPD API
+  // Fetch 911 calls from the API
   useEffect(() => {
-    const fetchIncidents = async () => {
+    const fetchCalls = async () => {
       try {
         setLoading(true);
         // Get current date for comparison
         const today = new Date();
 
-        // Query for incidents, ordered by most recent
+        // Query for 911 calls, ordered by most recent
         const response = await fetch(
-          `https://data.sfgov.org/resource/wg3w-h783.json?$order=incident_datetime DESC&$limit=100`
+          `https://data.sfgov.org/resource/gnap-fj3t.json?$order=received_datetime DESC`,
+          {
+            headers: {
+              'Accept': 'application/json',
+              // 'X-App-Token': 'YOUR_APP_TOKEN' // Optional: Add if you have an app token
+            }
+          }
         );
 
         if (!response.ok) {
-          throw new Error('Failed to fetch incidents');
+          throw new Error(`Failed to fetch 911 calls: ${response.status} ${response.statusText}`);
         }
 
         const data = await response.json();
-        console.log(`Fetched ${data.length} incidents from SFPD API`);
+        console.log(`Fetched ${data.length} 911 calls from API`);
 
         // Check if we have future-dated data (test data)
-        const hasFutureData = data.some(incident => {
-          const incidentDate = new Date(incident.incident_datetime);
-          return incidentDate > today;
+        const hasFutureData = data.some(call => {
+          const callDate = new Date(call.received_datetime);
+          return callDate > today;
         });
 
         if (hasFutureData) {
           console.log('Detected future-dated data in the API response (likely test data)');
         }
 
-        // Process incidents with raw data
+        // Process calls with raw data
         const processedAlerts = data
-          .filter(incident => incident.latitude && incident.longitude) // Only include incidents with coordinates
-          .map(incident => ({
-            id: incident.incident_id,
-            time: formatIncidentDate(incident.incident_datetime),
-            rawTime: new Date(incident.incident_datetime).getTime(), // Store raw timestamp for sorting
-            location: incident.intersection || incident.police_district,
-            category: incident.incident_category,
-            subcategory: incident.incident_subcategory,
-            description: incident.incident_description,
-            resolution: incident.resolution,
-            neighborhood: incident.analysis_neighborhood,
-            district: incident.police_district,
-            latitude: parseFloat(incident.latitude),
-            longitude: parseFloat(incident.longitude),
-            isFuture: new Date(incident.incident_datetime) > today,
+          .filter(call => call.intersection_point && call.intersection_point.coordinates) // Only include calls with coordinates
+          .map(call => ({
+            id: call.id,
+            time: formatCallDate(call.received_datetime),
+            rawTime: new Date(call.received_datetime).getTime(), // Store raw timestamp for sorting
+            location: call.intersection_name || 'Unknown Location',
+            callType: call.call_type_final_desc,
+            callTypeOriginal: call.call_type_original_desc,
+            priority: call.priority_final,
+            agency: call.agency,
+            sensitive: call.sensitive_call,
+            latitude: call.intersection_point.coordinates[1],
+            longitude: call.intersection_point.coordinates[0],
+            isFuture: new Date(call.received_datetime) > today,
             // Include additional fields from the raw data
-            incident_datetime: incident.incident_datetime,
-            incident_date: incident.incident_date,
-            incident_time: incident.incident_time,
-            incident_year: incident.incident_year,
-            incident_day_of_week: incident.incident_day_of_week,
-            report_datetime: incident.report_datetime,
-            incident_number: incident.incident_number,
-            cad_number: incident.cad_number,
-            report_type_description: incident.report_type_description
+            received_datetime: call.received_datetime,
+            entry_datetime: call.entry_datetime,
+            dispatch_datetime: call.dispatch_datetime,
+            enroute_datetime: call.enroute_datetime,
+            cad_number: call.cad_number,
+            onview_flag: call.onview_flag
           }))
           .sort((a, b) => b.rawTime - a.rawTime); // Sort by most recent using raw timestamp
 
-        console.log(`Processed ${processedAlerts.length} incidents with valid coordinates`);
+        console.log(`Processed ${processedAlerts.length} 911 calls with valid coordinates`);
 
-        // Log the most recent incident for debugging
+        // Log the most recent call for debugging
         if (processedAlerts.length > 0) {
           const mostRecent = processedAlerts[0];
-          console.log('Most recent incident:', {
+          console.log('Most recent 911 call:', {
             id: mostRecent.id,
             time: mostRecent.time,
             rawTime: new Date(mostRecent.rawTime).toISOString(),
-            category: mostRecent.category,
+            callType: mostRecent.callType,
             isFuture: mostRecent.isFuture
           });
         }
 
         setAlerts(processedAlerts);
       } catch (err) {
-        console.error('Error fetching incidents:', err);
-        setError('Failed to load incident data. Please try again later.');
+        console.error('Error fetching 911 calls:', err);
+        setError('Failed to load 911 call data. Please try again later.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchIncidents();
+    fetchCalls();
 
     // Set up polling to refresh data every 1 minute (more frequent updates)
-    const intervalId = setInterval(fetchIncidents, 60 * 1000);
+    const intervalId = setInterval(fetchCalls, 60 * 1000);
 
     return () => clearInterval(intervalId);
   }, []);
 
-  // Format incident date for display
-  const formatIncidentDate = (dateString) => {
+  // Format call date for display
+  const formatCallDate = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now - date;
@@ -144,29 +146,19 @@ export default function AlertFeed() {
     });
   };
 
-  // Get severity level based on incident category
-  const getSeverityLevel = (category) => {
-    const highSeverity = ['Assault', 'Robbery', 'Homicide', 'Rape', 'Weapons'];
-    const mediumSeverity = ['Larceny Theft', 'Drug Offense', 'Vehicle Impounded'];
-    const lowSeverity = ['Lost Property', 'Non-Criminal', 'Recovered Vehicle'];
-
-    if (highSeverity.some(term => category.includes(term))) return 'high';
-    if (mediumSeverity.some(term => category.includes(term))) return 'medium';
-    if (lowSeverity.some(term => category.includes(term))) return 'low';
-    return 'unknown';
-  };
-
-  // Get severity color
-  const getSeverityColor = (severity) => {
-    switch (severity) {
-      case 'high': return 'bg-red-500';
-      case 'medium': return 'bg-orange-500';
-      case 'low': return 'bg-yellow-500';
+  // Get priority color
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'A': return 'bg-red-500'; // Highest priority
+      case 'B': return 'bg-orange-500';
+      case 'C': return 'bg-yellow-500';
+      case 'D': return 'bg-blue-500';
+      case 'E': return 'bg-green-500'; // Lowest priority
       default: return 'bg-gray-500';
     }
   };
 
-  // Navigate to map with this incident
+  // Navigate to map with this call
   const handleAlertClick = (alert) => {
     navigate('/routes', {
       state: {
@@ -180,12 +172,12 @@ export default function AlertFeed() {
     <div className="bg-gray-950 text-white min-h-screen p-8 overflow-hidden">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-yellow-400 mb-4">🗞️ Live Safety Alerts</h1>
-        <p className="text-gray-400 mb-6">Real-time alerts from SFPD incident reports.</p>
+        <p className="text-gray-400 mb-6">Real-time alerts from 911 calls in San Francisco.</p>
 
         {loading && (
           <div className="text-center py-8">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-yellow-400"></div>
-            <p className="mt-2 text-gray-400">Loading incidents...</p>
+            <p className="mt-2 text-gray-400">Loading 911 calls...</p>
           </div>
         )}
 
@@ -197,7 +189,7 @@ export default function AlertFeed() {
 
         {!loading && !error && alerts.length === 0 && (
           <div className="bg-gray-800 p-6 rounded-xl text-center">
-            <p className="text-gray-300">No incidents reported at this time.</p>
+            <p className="text-gray-300">No 911 calls reported at this time.</p>
           </div>
         )}
 
@@ -215,16 +207,17 @@ export default function AlertFeed() {
               >
                 <div className="flex justify-between items-start">
                   <div className="flex items-start">
-                    <div className={`w-3 h-3 rounded-full mt-2 mr-3 ${getSeverityColor(getSeverityLevel(alert.category))}`}></div>
+                    <div className={`w-3 h-3 rounded-full mt-2 mr-3 ${getPriorityColor(alert.priority)}`}></div>
                     <div>
-                      <h2 className="text-lg font-semibold text-red-300">{alert.category}</h2>
-                      {alert.subcategory && <p className="text-sm text-gray-300">{alert.subcategory}</p>}
+                      <h2 className="text-lg font-semibold text-red-300">{alert.callType}</h2>
+                      {alert.callTypeOriginal && alert.callTypeOriginal !== alert.callType && (
+                        <p className="text-sm text-gray-300">Originally: {alert.callTypeOriginal}</p>
+                      )}
                       <p className="text-gray-300 mt-1">📍 {alert.location}</p>
-                      <p className="text-sm text-gray-400 mt-1">{alert.description}</p>
                       <div className="text-xs text-gray-500 mt-1">
-                        <p>Neighborhood: {alert.neighborhood}</p>
-                        <p>District: {alert.district}</p>
-                        <p>Resolution: {alert.resolution}</p>
+                        <p><span className="font-semibold">Priority:</span> {alert.priority}</p>
+                        <p><span className="font-semibold">Agency:</span> {alert.agency}</p>
+                        {alert.sensitive && <p className="text-red-500 font-semibold">Sensitive Call</p>}
                       </div>
                     </div>
                   </div>
