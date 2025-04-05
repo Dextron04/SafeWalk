@@ -20,7 +20,8 @@ export default function Navbar() {
           <Link to="/statistics" className="block mt-2 md:mt-0 hover:text-yellow-300">Statistics</Link>
           <Link to="/help" className="hover:text-yellow-300">Help</Link>
           <Link to="/alerts" className="hover:text-yellow-300">Alerts</Link>
-          <Link to="/routes" className="hover:text-yellow-300">My Routes</Link>
+          <Link to="/smart-routes" className="block mt-2 md:mt-0 hover:text-yellow-300">
+                            Smart Routes</Link>
           <Link to="/feedback" className="hover:text-yellow-300">Feedback</Link>
 
         </div>

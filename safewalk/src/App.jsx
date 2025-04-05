@@ -6,7 +6,7 @@ import MapView from './components/mapview';
 import Statics from './pages/statics';
 import HelpCenter from './pages/HelpCenter';
 import AlertFeed from './pages/AlertFeed';
-import MySR from './pages/MySafeRoutes';
+import SafeRouteFinder from './pages/MySafeRoutes';
 import Feedback from './components/Feedback';
 
 export default function App() {
@@ -19,7 +19,7 @@ export default function App() {
         <Route path="/statistics" element={<Statics />} />
         <Route path="/help" element={<HelpCenter />} />
         <Route path="/alerts" element={<AlertFeed />} />
-        <Route path="/routes" element={<MySR />} />
+        <Route path="/routes" element={<SafeRouteFinder />} />
         <Route path="/feedback" element={<Feedback />} />
       </Routes>
     </>
