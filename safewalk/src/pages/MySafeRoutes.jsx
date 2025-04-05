@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Polyline, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-
+import AlertsFeed from '../components/AlertsFeed';
 
 // Fix for Leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -15,7 +15,20 @@ L.Icon.Default.mergeOptions({
 // Route colors for different routes
 const ROUTE_COLORS = ['#00FF00', '#FF0000', '#0000FF', '#FFA500', '#800080'];
 
-export default function SafeTransitRouteFinder() {
+// Component to handle map reference
+function MapController({ userLocation }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (userLocation) {
+      map.setView([userLocation.lat, userLocation.lng], 13);
+    }
+  }, [map, userLocation]);
+
+  return null;
+}
+
+export default function MySafeRoutes() {
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [routes, setRoutes] = useState([]);
@@ -24,12 +37,44 @@ export default function SafeTransitRouteFinder() {
   const [startLocation, setStartLocation] = useState(null);
   const [endLocation, setEndLocation] = useState(null);
   const [mapCenter, setMapCenter] = useState([37.7749, -122.4194]); // Default center to SF
+  const [userLocation, setUserLocation] = useState(null);
+  const [locationError, setLocationError] = useState(null);
+  const [showAlerts, setShowAlerts] = useState(true);
 
   // Refs for Google Places Autocomplete
   const originInputRef = useRef(null);
   const destinationInputRef = useRef(null);
   const originAutocompleteRef = useRef(null);
   const destinationAutocompleteRef = useRef(null);
+
+  // Get user's current location
+  useEffect(() => {
+    const getUserLocation = () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            setUserLocation({ lat: latitude, lng: longitude });
+            setMapCenter([latitude, longitude]);
+            setLocationError(null);
+          },
+          (error) => {
+            console.error('Error getting location:', error);
+            setLocationError('Unable to get your location. Please enable location services.');
+          }
+        );
+      } else {
+        setLocationError('Geolocation is not supported by your browser.');
+      }
+    };
+
+    getUserLocation();
+
+    // Set up periodic location updates
+    const locationInterval = setInterval(getUserLocation, 60000); // Update every minute
+
+    return () => clearInterval(locationInterval);
+  }, []);
 
   useEffect(() => {
     // Load Google Maps JavaScript API with Places library
@@ -203,7 +248,7 @@ export default function SafeTransitRouteFinder() {
 
   return (
     <div className="bg-gray-950 text-white min-h-screen p-6">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-yellow-400 mb-4">🚍 SF Transit Directions</h1>
 
         <form onSubmit={handleFindRoute} className="flex flex-col md:flex-row gap-4 mb-6">
@@ -230,102 +275,148 @@ export default function SafeTransitRouteFinder() {
           </button>
         </form>
 
-        {routes.length > 0 && (
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-yellow-400 mb-3">Available Routes</h2>
-            <div className="flex flex-wrap gap-3">
-              {routes.map((route, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleRouteSelect(index)}
-                  className={`px-4 py-2 rounded-lg flex items-center ${selectedRouteIndex === index
-                    ? 'bg-yellow-400 text-black font-bold'
-                    : 'bg-gray-800 text-white'
-                    }`}
-                >
-                  <div
-                    className="w-4 h-4 rounded-full mr-2"
-                    style={{ backgroundColor: ROUTE_COLORS[index % ROUTE_COLORS.length] }}
-                  ></div>
-                  <span>Route {index + 1}</span>
-                  <span className="ml-2 text-sm">
-                    ({route.distance} • {route.duration})
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {routes.length > 0 && (
-          <div className="space-y-4 mb-10">
-            <h2 className="text-xl font-semibold text-yellow-400">
-              Route {selectedRouteIndex + 1} Instructions
-              <span className="text-sm font-normal ml-2">
-                ({routes[selectedRouteIndex].distance} • {routes[selectedRouteIndex].duration})
-              </span>
-            </h2>
-
-            {routes[selectedRouteIndex].warnings.length > 0 && (
-              <div className="bg-yellow-900 text-yellow-200 p-3 rounded-lg mb-4">
-                <h3 className="font-semibold">Warnings:</h3>
-                <ul className="list-disc pl-4">
-                  {routes[selectedRouteIndex].warnings.map((warning, idx) => (
-                    <li key={idx}>{warning}</li>
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="lg:w-2/3">
+            {routes.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-yellow-400 mb-3">Available Routes</h2>
+                <div className="flex flex-wrap gap-3">
+                  {routes.map((route, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleRouteSelect(index)}
+                      className={`px-4 py-2 rounded-lg flex items-center ${selectedRouteIndex === index
+                        ? 'bg-yellow-400 text-black font-bold'
+                        : 'bg-gray-800 text-white'
+                        }`}
+                    >
+                      <div
+                        className="w-4 h-4 rounded-full mr-2"
+                        style={{ backgroundColor: ROUTE_COLORS[index % ROUTE_COLORS.length] }}
+                      ></div>
+                      <span>Route {index + 1}</span>
+                      <span className="ml-2 text-sm">
+                        ({route.distance} • {route.duration})
+                      </span>
+                    </button>
                   ))}
-                </ul>
-              </div>
-            )}
-
-            {routes[selectedRouteIndex].steps.map((step, idx) => (
-              <div key={idx} className="bg-gray-800 p-4 rounded-lg">
-                <p className="text-sm text-gray-200 mb-1">
-                  <strong>{step.index}.</strong>{" "}
-                  <span dangerouslySetInnerHTML={{ __html: step.instruction }} />
-                </p>
-                <div className="text-xs text-gray-400 mt-1">
-                  Distance: {step.distance} • Duration: {step.duration}
                 </div>
               </div>
-            ))}
+            )}
+
+            {routes.length > 0 && (
+              <div className="space-y-4 mb-6">
+                <h2 className="text-xl font-semibold text-yellow-400">
+                  Route {selectedRouteIndex + 1} Instructions
+                  <span className="text-sm font-normal ml-2">
+                    ({routes[selectedRouteIndex].distance} • {routes[selectedRouteIndex].duration})
+                  </span>
+                </h2>
+
+                {routes[selectedRouteIndex].warnings.length > 0 && (
+                  <div className="bg-yellow-900 text-yellow-200 p-3 rounded-lg mb-4">
+                    <h3 className="font-semibold">Warnings:</h3>
+                    <ul className="list-disc pl-4">
+                      {routes[selectedRouteIndex].warnings.map((warning, idx) => (
+                        <li key={idx}>{warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {routes[selectedRouteIndex].steps.map((step, idx) => (
+                  <div key={idx} className="bg-gray-800 p-4 rounded-lg">
+                    <p className="text-sm text-gray-200 mb-1">
+                      <strong>{step.index}.</strong>{" "}
+                      <span dangerouslySetInnerHTML={{ __html: step.instruction }} />
+                    </p>
+                    <div className="text-xs text-gray-400 mt-1">
+                      Distance: {step.distance} • Duration: {step.duration}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="h-[500px] rounded-xl overflow-hidden">
+              <MapContainer
+                center={mapCenter}
+                zoom={13}
+                className="h-full w-full z-0"
+                key={mapCenter.join(',')}
+              >
+                <TileLayer
+                  attribution="&copy; OpenStreetMap contributors"
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+
+                {userLocation && (
+                  <>
+                    <Marker position={[userLocation.lat, userLocation.lng]}>
+                      <Popup>Your Location</Popup>
+                    </Marker>
+                    <MapController userLocation={userLocation} />
+                  </>
+                )}
+
+                {routes.map((route, index) => (
+                  <Polyline
+                    key={index}
+                    positions={route.path}
+                    pathOptions={{
+                      color: ROUTE_COLORS[index % ROUTE_COLORS.length],
+                      weight: selectedRouteIndex === index ? 6 : 3,
+                      opacity: selectedRouteIndex === index ? 1 : 0.7
+                    }}
+                  />
+                ))}
+
+                {startLocation && (
+                  <Marker position={[startLocation.lat, startLocation.lng]}>
+                    <Popup>Start: {origin}</Popup>
+                  </Marker>
+                )}
+                {endLocation && (
+                  <Marker position={[endLocation.lat, endLocation.lng]}>
+                    <Popup>End: {destination}</Popup>
+                  </Marker>
+                )}
+
+                {showAlerts && userLocation && (
+                  <AlertsFeed userLocation={userLocation} />
+                )}
+              </MapContainer>
+            </div>
           </div>
-        )}
 
-        <div className="h-[500px] rounded-xl overflow-hidden">
-          <MapContainer
-            center={mapCenter}
-            zoom={13}
-            className="h-full w-full z-0"
-            key={mapCenter.join(',')}
-          >
-            <TileLayer
-              attribution="&copy; OpenStreetMap contributors"
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
+          <div className="lg:w-1/3">
+            <div className="bg-gray-800 p-4 rounded-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-yellow-400">Safety Alerts</h2>
+                <button
+                  onClick={() => setShowAlerts(!showAlerts)}
+                  className="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded"
+                >
+                  {showAlerts ? 'Hide' : 'Show'}
+                </button>
+              </div>
 
-            {routes.map((route, index) => (
-              <Polyline
-                key={index}
-                positions={route.path}
-                pathOptions={{
-                  color: ROUTE_COLORS[index % ROUTE_COLORS.length],
-                  weight: selectedRouteIndex === index ? 6 : 3,
-                  opacity: selectedRouteIndex === index ? 1 : 0.7
-                }}
-              />
-            ))}
+              {locationError && (
+                <div className="bg-red-900 text-red-200 p-3 rounded-lg mb-4">
+                  <p>{locationError}</p>
+                  <p className="text-sm mt-2">Enable location services to see nearby alerts.</p>
+                </div>
+              )}
 
-            {startLocation && (
-              <Marker position={[startLocation.lat, startLocation.lng]}>
-                <Popup>Start: {origin}</Popup>
-              </Marker>
-            )}
-            {endLocation && (
-              <Marker position={[endLocation.lat, endLocation.lng]}>
-                <Popup>End: {destination}</Popup>
-              </Marker>
-            )}
-          </MapContainer>
+              {showAlerts && userLocation ? (
+                <div className="text-gray-300">
+                  <p>Alerts are displayed on the map. Toggle the "Show" button to show/hide alerts.</p>
+                </div>
+              ) : (
+                <p className="text-gray-300">Enable location services to see nearby alerts.</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
