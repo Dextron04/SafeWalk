@@ -16,7 +16,6 @@ export default function Navbar() {
           ☰
         </button>
         <div className={`md:flex md:items-center md:space-x-6 ${isOpen ? 'block' : 'hidden'}`}>
-          <Link to="/" className="block mt-2 md:mt-0 hover:text-yellow-300">Home</Link>
           <Link to="/map" className="block mt-2 md:mt-0 hover:text-yellow-300">Map</Link>
           <Link to="/statistics" className="block mt-2 md:mt-0 hover:text-yellow-300">Statistics</Link>
           <Link to="/help" className="hover:text-yellow-300">Help</Link>
