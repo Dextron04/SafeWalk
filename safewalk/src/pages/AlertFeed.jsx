@@ -34,21 +34,18 @@ export default function AlertFeed() {
     return () => clearInterval(locationInterval);
   }, []);
 
-  // Fetch 911 calls from the API
+  // Fetch 911 calls from the server API
   useEffect(() => {
     const fetchCalls = async () => {
       try {
         setLoading(true);
-        // Get current date for comparison
-        const today = new Date();
 
-        // Query for 911 calls, ordered by most recent
+        // Query for 911 calls from our server API
         const response = await fetch(
-          `https://data.sfgov.org/resource/gnap-fj3t.json?$order=received_datetime DESC`,
+          `http://localhost:5000/api/911calls?format=calls`,
           {
             headers: {
               'Accept': 'application/json',
-              // 'X-App-Token': 'YOUR_APP_TOKEN' // Optional: Add if you have an app token
             }
           }
         );
@@ -58,59 +55,16 @@ export default function AlertFeed() {
         }
 
         const data = await response.json();
-        console.log(`Fetched ${data.length} 911 calls from API`);
+        console.log(`Fetched ${data.totalCalls} 911 calls from server API`);
 
         // Check if we have future-dated data (test data)
-        const hasFutureData = data.some(call => {
-          const callDate = new Date(call.received_datetime);
-          return callDate > today;
-        });
+        const hasFutureData = data.calls.some(alert => alert.isFuture);
 
         if (hasFutureData) {
           console.log('Detected future-dated data in the API response (likely test data)');
         }
 
-        // Process calls with raw data
-        const processedAlerts = data
-          .filter(call => call.intersection_point && call.intersection_point.coordinates) // Only include calls with coordinates
-          .map(call => ({
-            id: call.id,
-            time: formatCallDate(call.received_datetime),
-            rawTime: new Date(call.received_datetime).getTime(), // Store raw timestamp for sorting
-            location: call.intersection_name || 'Unknown Location',
-            callType: call.call_type_final_desc,
-            callTypeOriginal: call.call_type_original_desc,
-            priority: call.priority_final,
-            agency: call.agency,
-            sensitive: call.sensitive_call,
-            latitude: call.intersection_point.coordinates[1],
-            longitude: call.intersection_point.coordinates[0],
-            isFuture: new Date(call.received_datetime) > today,
-            // Include additional fields from the raw data
-            received_datetime: call.received_datetime,
-            entry_datetime: call.entry_datetime,
-            dispatch_datetime: call.dispatch_datetime,
-            enroute_datetime: call.enroute_datetime,
-            cad_number: call.cad_number,
-            onview_flag: call.onview_flag
-          }))
-          .sort((a, b) => b.rawTime - a.rawTime); // Sort by most recent using raw timestamp
-
-        console.log(`Processed ${processedAlerts.length} 911 calls with valid coordinates`);
-
-        // Log the most recent call for debugging
-        if (processedAlerts.length > 0) {
-          const mostRecent = processedAlerts[0];
-          console.log('Most recent 911 call:', {
-            id: mostRecent.id,
-            time: mostRecent.time,
-            rawTime: new Date(mostRecent.rawTime).toISOString(),
-            callType: mostRecent.callType,
-            isFuture: mostRecent.isFuture
-          });
-        }
-
-        setAlerts(processedAlerts);
+        setAlerts(data.calls);
       } catch (err) {
         console.error('Error fetching 911 calls:', err);
         setError('Failed to load 911 call data. Please try again later.');
@@ -126,25 +80,6 @@ export default function AlertFeed() {
 
     return () => clearInterval(intervalId);
   }, []);
-
-  // Format call date for display
-  const formatCallDate = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
-
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      hour12: true
-    });
-  };
 
   // Get priority color
   const getPriorityColor = (priority) => {

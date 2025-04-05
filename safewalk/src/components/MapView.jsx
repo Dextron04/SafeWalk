@@ -33,74 +33,33 @@ export default function MapView() {
   const [mapCenter, setMapCenter] = useState([37.7749, -122.4194]); // Default center to SF
   const [maxCount, setMaxCount] = useState(1); // Track the maximum count for scaling
 
-  // Fetch 911 calls from the API
+  // Fetch 911 calls from the server API
   useEffect(() => {
-    const fetchCalls = async () => {
+    const fetchHotspots = async () => {
       try {
         setLoading(true);
 
-        // Query for 911 calls, ordered by most recent
+        // Query for hotspots from our server API
         const response = await fetch(
-          `https://data.sfgov.org/resource/gnap-fj3t.json?$order=received_datetime DESC`
+          `http://localhost:5000/api/911calls?format=hotspots&limit=1000`
         );
 
         if (!response.ok) {
-          throw new Error('Failed to fetch 911 calls');
+          throw new Error('Failed to fetch 911 calls data');
         }
 
         const data = await response.json();
-        console.log(`Fetched ${data.length} 911 calls from API`);
+        console.log(`Fetched ${data.totalHotspots} hotspots from server API`);
 
-        // Process calls with coordinates
-        const validCalls = data.filter(call =>
-          call.intersection_point &&
-          call.intersection_point.coordinates &&
-          call.intersection_point.coordinates.length === 2
-        );
-
-        console.log(`Found ${validCalls.length} calls with valid coordinates`);
-
-        // Group calls by location to identify hotspots
-        const locationGroups = {};
-
-        validCalls.forEach(call => {
-          const lat = call.intersection_point.coordinates[1];
-          const lng = call.intersection_point.coordinates[0];
-
-          // Round coordinates to create grid cells (approximately 100m x 100m)
-          const gridLat = Math.round(lat * 100) / 100;
-          const gridLng = Math.round(lng * 100) / 100;
-          const key = `${gridLat},${gridLng}`;
-
-          if (!locationGroups[key]) {
-            locationGroups[key] = {
-              lat: gridLat,
-              lng: gridLng,
-              count: 0,
-              calls: []
-            };
-          }
-
-          locationGroups[key].count++;
-          locationGroups[key].calls.push(call);
-        });
-
-        // Convert to array and sort by count
-        const hotspotArray = Object.values(locationGroups)
-          .sort((a, b) => b.count - a.count);
-
-        // Find the maximum count for scaling
-        const maxCallCount = hotspotArray.length > 0 ? hotspotArray[0].count : 1;
-        setMaxCount(maxCallCount);
-
-        console.log(`Identified ${hotspotArray.length} hotspots`);
+        // Set the maximum count for scaling
+        setMaxCount(data.maxCount);
 
         // Set the map center to the first hotspot if available
-        if (hotspotArray.length > 0) {
-          setMapCenter([hotspotArray[0].lat, hotspotArray[0].lng]);
+        if (data.hotspots.length > 0) {
+          setMapCenter([data.hotspots[0].lat, data.hotspots[0].lng]);
         }
 
-        setHotspots(hotspotArray);
+        setHotspots(data.hotspots);
         setLoading(false);
       } catch (err) {
         console.error('Error fetching 911 calls:', err);
@@ -109,10 +68,10 @@ export default function MapView() {
       }
     };
 
-    fetchCalls();
+    fetchHotspots();
 
     // Set up polling to refresh data every 5 minutes
-    const intervalId = setInterval(fetchCalls, 5 * 60 * 1000);
+    const intervalId = setInterval(fetchHotspots, 5 * 60 * 1000);
 
     return () => clearInterval(intervalId);
   }, []);
