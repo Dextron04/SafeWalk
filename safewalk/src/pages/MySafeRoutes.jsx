@@ -41,14 +41,19 @@ const SELECTED_ROUTE_COLOR = "#00C853"; // More vibrant green
 const UNSELECTED_ROUTE_COLOR = "#616161"; // More muted grey
 
 // Component to handle map reference
-function MapController({ userLocation }) {
+function MapController({ userLocation, onMapReady }) {
   const map = useMap();
 
   useEffect(() => {
     if (userLocation) {
       map.setView([userLocation.lat, userLocation.lng], 13);
     }
-  }, [map, userLocation]);
+
+    // Pass map reference to parent component
+    if (onMapReady && map) {
+      onMapReady(map);
+    }
+  }, [map, userLocation, onMapReady]);
 
   return null;
 }
@@ -120,12 +125,12 @@ function RouteAlerts({ route, onAlertsFound }) {
 
         console.log(`Found ${nearbyAlerts.length} 911 calls along the route`);
         setRouteAlerts(nearbyAlerts);
-        
+
         // Call the callback to pass alerts to parent component
         if (onAlertsFound) {
           onAlertsFound(nearbyAlerts);
         }
-        
+
         console.log(`Route alerts:`, nearbyAlerts);
       } catch (err) {
         console.error("Error fetching route alerts:", err);
@@ -202,11 +207,13 @@ export default function MySafeRoutes() {
   const [showRouteAlerts, setShowRouteAlerts] = useState(true);
   const [expandedRouteIndex, setExpandedRouteIndex] = useState(null);
   const [routeAlerts, setRouteAlerts] = useState([]);
-
+  const [routeAlertCounts, setRouteAlertCounts] = useState([]); // New state for alert counts per route
+  const [mapRef, setMapRef] = useState(null);
+  const [isMapReady, setIsMapReady] = useState(false);
+  const originAutocompleteRef = useRef(null);
   // Refs for Google Places Autocomplete
   const originInputRef = useRef(null);
   const destinationInputRef = useRef(null);
-  const originAutocompleteRef = useRef(null);
   const destinationAutocompleteRef = useRef(null);
 
   // Get user's current location
@@ -233,7 +240,6 @@ export default function MySafeRoutes() {
     };
 
     getUserLocation();
-
     // Set up periodic location updates
     const locationInterval = setInterval(getUserLocation, 60000); // Update every minute
 
@@ -275,6 +281,7 @@ export default function MySafeRoutes() {
           fields: ["address_components", "geometry", "formatted_address"],
           types: ["geocode"], // Use a single type to avoid the error
         });
+
       originAutocompleteRef.current.addListener("place_changed", () => {
         const place = originAutocompleteRef.current.getPlace();
         if (place.formatted_address) {
@@ -294,6 +301,7 @@ export default function MySafeRoutes() {
             types: ["geocode"], // Use a single type to avoid the error
           }
         );
+
       destinationAutocompleteRef.current.addListener("place_changed", () => {
         const place = destinationAutocompleteRef.current.getPlace();
         if (place.formatted_address) {
@@ -313,13 +321,16 @@ export default function MySafeRoutes() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/directions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ origin, destination }),
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/directions`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ origin, destination }),
+        }
+      );
 
       const data = await response.json();
 
@@ -349,12 +360,8 @@ export default function MySafeRoutes() {
         };
       });
 
-      // console.log("Routes:", JSON.stringify(allRoutes, null, 2));
-
-
       setRoutes(allRoutes);
-
-      // Set start and end locations for markers
+      setRouteAlertCounts(new Array(allRoutes.length).fill(0)); // Initialize alert counts array
       setStartLocation(data.routes[0].legs[0].start_location);
       setEndLocation(data.routes[0].legs[0].end_location);
 
@@ -415,13 +422,10 @@ export default function MySafeRoutes() {
     // Force re-render of the map by using a little state update trick
     setRoutes((prevRoutes) => {
       // No need to actually modify the routes, just return the same array
-      // The key point is that calling this setter will trigger a re-render
       return [...prevRoutes];
     });
-
     // Update the selected route index
     setSelectedRouteIndex(index);
-
     // No longer automatically expand the route details
     // Only the toggle button should control this now
 
@@ -434,8 +438,12 @@ export default function MySafeRoutes() {
   };
 
   // Function to fetch route alerts
-  const fetchRouteAlerts = async (route) => {
-    if (!route || !route.path || route.path.length === 0) return;
+  const fetchRouteAlerts = async (route, routeIndex = null) => {
+    if (!route || !route.path || route.path.length === 0) return 0;
+    if (!mapRef) {
+      console.log("Map reference not available yet");
+      return 0;
+    }
 
     try {
       // Sample points along the route (every 5th point)
@@ -459,13 +467,10 @@ export default function MySafeRoutes() {
       console.log(`Fetched ${data.totalCalls} 911 calls for route analysis`);
 
       // Filter alerts that are within 0.2 miles of any sampled point
-      const map = document.querySelector(".leaflet-container")?._leaflet_map;
-      if (!map) return;
-
       const nearbyAlerts = data.calls.filter((alert) => {
         // Check if alert is within 0.2 miles of any sampled point
         return sampledPoints.some((point) => {
-          const distance = map.distance(
+          const distance = mapRef.distance(
             [point[0], point[1]],
             [alert.latitude, alert.longitude]
           );
@@ -474,20 +479,81 @@ export default function MySafeRoutes() {
         });
       });
 
-      console.log(`Found ${nearbyAlerts.length} 911 calls along the route`);
-      setRouteAlerts(nearbyAlerts);
-      
+      const alertCount = nearbyAlerts.length;
+      console.log(
+        `Found ${alertCount} 911 calls along route ${
+          routeIndex !== null ? routeIndex : "selected"
+        }`
+      );
+
+      // If this is for the selected route, update the routeAlerts state
+      if (routeIndex === null || routeIndex === selectedRouteIndex) {
+        setRouteAlerts(nearbyAlerts);
+      }
+
+      // If a route index was provided, update that specific count in the array
+      if (routeIndex !== null) {
+        setRouteAlertCounts((prevCounts) => {
+          const newCounts = [...prevCounts];
+          newCounts[routeIndex] = alertCount;
+          return newCounts;
+        });
+      }
+
+      return alertCount;
     } catch (err) {
       console.error("Error fetching route alerts:", err);
+      return 0;
     }
   };
 
-  // Update route alerts when selected route changes
+  // Handle map ready event
+  const handleMapReady = (map) => {
+    console.log("Map reference obtained");
+    setMapRef(map);
+    setIsMapReady(true);
+  };
+
+  // Process alerts for all routes when map reference is available and routes are loaded
   useEffect(() => {
-    if (routes.length > 0 && showRouteAlerts) {
-      fetchRouteAlerts(routes[selectedRouteIndex]);
-    }
-  }, [selectedRouteIndex, routes, showRouteAlerts]);
+    if (!isMapReady || routes.length === 0 || !showRouteAlerts) return;
+
+    console.log(
+      "Map is ready and routes are available - scheduling alert fetch"
+    );
+
+    // Wait a short time to ensure everything is initialized
+    const initialFetchTimeout = setTimeout(async () => {
+      console.log("Starting to fetch alerts for all routes");
+
+      try {
+        // First fetch alerts for the selected route to display on map
+        await fetchRouteAlerts(routes[selectedRouteIndex]);
+
+        // Then fetch alert counts for all routes
+        for (let i = 0; i < routes.length; i++) {
+          await fetchRouteAlerts(routes[i], i);
+        }
+
+        console.log("Completed initial route alert calculations");
+      } catch (error) {
+        console.error("Error during initial alert fetch:", error);
+      }
+    }, 5000); // 5 second delay to ensure map is fully loaded
+
+    // Set up periodic refresh
+    const intervalId = setInterval(() => {
+      console.log("Refreshing route alert data");
+      routes.forEach((route, index) => {
+        fetchRouteAlerts(route, index);
+      });
+    }, 30000); // Refresh every 30 seconds
+
+    return () => {
+      clearTimeout(initialFetchTimeout);
+      clearInterval(intervalId);
+    };
+  }, [isMapReady, routes, showRouteAlerts]);
 
   return (
     <div className="bg-gray-950 text-white min-h-screen p-6">
@@ -495,7 +561,6 @@ export default function MySafeRoutes() {
         <h1 className="text-3xl font-bold text-yellow-400 mb-4">
           🚍 SF Transit Directions
         </h1>
-
         <form
           onSubmit={handleFindRoute}
           className="flex flex-col md:flex-row gap-4 mb-6"
@@ -559,7 +624,16 @@ export default function MySafeRoutes() {
                               Route {index + 1}
                             </span>
                             <span className="ml-2 text-sm text-gray-400">
-                              ({route.distance} • {route.duration})
+                              ({route.distance} • {route.duration}
+                              {routeAlertCounts[index] > 0 ? (
+                                <span className="text-red-400 ml-1">
+                                  • {routeAlertCounts[index]} alerts
+                                </span>
+                              ) : (
+                                <span className="text-green-400 ml-1">
+                                  • 0 alerts
+                                </span>
+                              )}
                             </span>
                           </div>
                         </div>
@@ -602,7 +676,6 @@ export default function MySafeRoutes() {
                           </button>
                         </div>
                       </div>
-
                       {expandedRouteIndex === index && (
                         <div className="p-4 border-t border-gray-700">
                           {route.warnings.length > 0 && (
@@ -662,7 +735,10 @@ export default function MySafeRoutes() {
                     <Marker position={[userLocation.lat, userLocation.lng]}>
                       <Popup>Your Location</Popup>
                     </Marker>
-                    <MapController userLocation={userLocation} />
+                    <MapController
+                      userLocation={userLocation}
+                      onMapReady={handleMapReady}
+                    />
                   </>
                 )}
 
@@ -686,6 +762,7 @@ export default function MySafeRoutes() {
                     <Popup>Start: {origin}</Popup>
                   </Marker>
                 )}
+
                 {endLocation && (
                   <Marker position={[endLocation.lat, endLocation.lng]}>
                     <Popup>End: {destination}</Popup>
@@ -696,9 +773,9 @@ export default function MySafeRoutes() {
                   <AlertsFeed userLocation={userLocation} />
                 )}
 
-                {showRouteAlerts && routes.length > 0 && (
-                  <RouteAlerts 
-                    route={routes[selectedRouteIndex]} 
+                {showRouteAlerts && routes.length > 0 && mapRef && (
+                  <RouteAlerts
+                    route={routes[selectedRouteIndex]}
                     onAlertsFound={setRouteAlerts}
                   />
                 )}
