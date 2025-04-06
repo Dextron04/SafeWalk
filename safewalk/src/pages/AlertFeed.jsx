@@ -3,12 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AlertFeed() {
   const [alerts, setAlerts] = useState([]);
+  const [filteredAlerts, setFilteredAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
   const [timeRange, setTimeRange] = useState('All');
   const [agencyFilter, setAgencyFilter] = useState('All');
   const [callTypeFilter, setCallTypeFilter] = useState('All');
-  const [filteredAlerts, setFilteredAlerts] = useState([]);
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -28,15 +29,7 @@ export default function AlertFeed() {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/911calls?format=calls`);
         if (!response.ok) throw new Error('Failed to fetch 911 calls');
         const data = await response.json();
-        console.log('Data received:', data);
-        
-        // Sort alerts by priority (A first, then B, etc.)
-        const sortedAlerts = (data.calls || []).sort((a, b) => {
-          const priorityOrder = { 'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5 };
-          return (priorityOrder[a.priority] || 99) - (priorityOrder[b.priority] || 99);
-        });
-        
-        setAlerts(sortedAlerts);
+        setAlerts(data.calls);
       } catch (err) {
         console.error(err);
         setError('Failed to load 911 call data. Please try again later.');
@@ -83,7 +76,7 @@ export default function AlertFeed() {
     return groups;
   }, {});
 
-  const priority = ['A', 'B', 'C', 'D', 'E'];
+  const priorityOrder = ['A', 'B', 'C', 'D', 'E'];
 
   const allAgencies = ['All', ...new Set(alerts.map((a) => a.agency).filter(Boolean))];
   const allCallTypes = ['All', ...new Set(alerts.map((a) => a.callType).filter(Boolean))];
@@ -124,7 +117,7 @@ export default function AlertFeed() {
             </select>
           </div>
         </div>
-        
+
         {/* Content */}
         {loading && (
           <div className="text-center py-8">
@@ -139,30 +132,22 @@ export default function AlertFeed() {
           </div>
         )}
 
-        {!loading && !error && alerts.length === 0 && (
+        {!loading && !error && filteredAlerts.length === 0 && (
           <div className="bg-gray-800 p-6 rounded-xl text-center text-gray-300">
-            No alerts available at this time.
+            No alerts matching the selected filters.
           </div>
         )}
 
-        {!loading && !error && alerts.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <AnimatePresence>
-              {alerts.map((alert) => (
-                <motion.div
-                  key={alert.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                  className="bg-gray-800 hover:bg-gray-700 transition-all p-4 rounded-lg shadow border border-gray-700"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-start gap-2">
-                      <span className={`inline-block w-3 h-3 rounded-full mt-1.5 ${getPriorityColor(alert.priority)}`}></span>
-                      <h3 className="font-bold text-red-300 text-sm md:text-base">{alert.callType}</h3>
-                    </div>
-                    <span className="text-xs text-gray-400 whitespace-nowrap">{alert.time}</span>
+        {!loading && !error && filteredAlerts.length > 0 && (
+          <div className="space-y-10">
+            {priorityOrder.map((priority) => (
+              groupedAlerts[priority] && (
+                <div key={priority}>
+                  <div className="sticky top-0 z-10 bg-gray-950 py-2">
+                    <h2 className="text-xl font-bold text-white border-b border-gray-700 pb-1 flex items-center gap-2">
+                      <span className={`inline-block w-3 h-3 rounded-full ${getPriorityColor(priority)}`}></span>
+                      Priority {priority} Alerts ({groupedAlerts[priority].length})
+                    </h2>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -192,9 +177,9 @@ export default function AlertFeed() {
                       ))}
                     </AnimatePresence>
                   </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                </div>
+              )
+            ))}
           </div>
         )}
       </div>
