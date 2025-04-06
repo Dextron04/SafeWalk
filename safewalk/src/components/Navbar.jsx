@@ -1,9 +1,15 @@
 import { useState } from "react";
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
+  
+  // Function to determine if a link is active
+  const isActive = (path) => {
+    return location.pathname === path ? "text-yellow-400" : "hover:text-yellow-300";
+  };
 
   return (
     <nav className="bg-gray-900 text-white p-4 shadow-md z-50 relative">
@@ -23,22 +29,22 @@ export default function Navbar() {
 
         {/* Desktop menu */}
         <div className="hidden md:flex md:items-center md:space-x-6">
-          <Link to="/map" className="hover:text-yellow-300">
+          <Link to="/map" className={isActive("/map")}>
             Map
           </Link>
-          <Link to="/statistics" className="hover:text-yellow-300">
+          <Link to="/statistics" className={isActive("/statics")}>
             Statistics
           </Link>
-          <Link to="/help" className="hover:text-yellow-300">
+          <Link to="/help" className={isActive("/help")}>
             Help
           </Link>
-          <Link to="/alerts" className="hover:text-yellow-300">
+          <Link to="/alerts" className={isActive("/alerts")}>
             Alerts
           </Link>
-          <Link to="/routes" className="hover:text-yellow-300">
+          <Link to="/routes" className={isActive("/routes")}>
             Smart Routes
           </Link>
-          <Link to="/feedback" className="hover:text-yellow-300">
+          <Link to="/feedback" className={isActive("/feedback")}>
             Feedback
           </Link>
         </div>
@@ -50,46 +56,48 @@ export default function Navbar() {
           <div className="flex flex-col space-y-4">
             <Link
               to="/map"
-              className="hover:text-yellow-300 py-2 border-b border
-            -gray-700"
+              className="hover:text-yellow-300 py-2 border-b border-gray-700"
+              onClick={() => setIsOpen(false)}
             >
               Map
             </Link>
 
             <Link
-              to="/s
-t             atistics"
-              className="hover:text-yellow-300 py-2 border-b border
-            -gray-700"
+              to="/statistics"
+              className="hover:text-yellow-300 py-2 border-b border-gray-700"
+              onClick={() => setIsOpen(false)}
             >
               Statistics
             </Link>
 
             <Link
-              t
-              o="/help"
-              className="hover:text-yellow-300 py-2 border-b border
-            -gray-700"
+              to="/help"
+              className="hover:text-yellow-300 py-2 border-b border-gray-700"
+              onClick={() => setIsOpen(false)}
             >
               Help
             </Link>
 
             <Link
               to="/alerts"
-              className="hover:text-yellow-300 py-2 border-b border
-            -gray-700"
+              className="hover:text-yellow-300 py-2 border-b border-gray-700"
+              onClick={() => setIsOpen(false)}
             >
               Alerts
             </Link>
 
             <Link
               to="/routes"
-              className="hover:text-yellow-300 py-2 border-b border
-            -gray-700"
+              className="hover:text-yellow-300 py-2 border-b border-gray-700"
+              onClick={() => setIsOpen(false)}
             >
               Smart Routes
             </Link>
-            <Link to="/feedback" className="hover:text-yellow-300 py-2">
+            <Link 
+              to="/feedback" 
+              className="hover:text-yellow-300 py-2"
+              onClick={() => setIsOpen(false)}
+            >
               Feedback
             </Link>
           </div>
