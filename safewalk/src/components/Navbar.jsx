@@ -48,19 +48,45 @@ export default function Navbar() {
       {isOpen && (
         <div className="md:hidden absolute top-full left-0 right-0 bg-gray-800 shadow-lg py-4 px-6 z-50">
           <div className="flex flex-col space-y-4">
-            <Link to="/map" className="hover:text-yellow-300 py-2 border-b border-gray-700">
+            <Link
+              to="/map"
+              className="hover:text-yellow-300 py-2 border-b border
+            -gray-700"
+            >
               Map
             </Link>
-            <Link to="/statistics" className="hover:text-yellow-300 py-2 border-b border-gray-700">
+
+            <Link
+              to="/s
+t             atistics"
+              className="hover:text-yellow-300 py-2 border-b border
+            -gray-700"
+            >
               Statistics
             </Link>
-            <Link to="/help" className="hover:text-yellow-300 py-2 border-b border-gray-700">
+
+            <Link
+              t
+              o="/help"
+              className="hover:text-yellow-300 py-2 border-b border
+            -gray-700"
+            >
               Help
             </Link>
-            <Link to="/alerts" className="hover:text-yellow-300 py-2 border-b border-gray-700">
+
+            <Link
+              to="/alerts"
+              className="hover:text-yellow-300 py-2 border-b border
+            -gray-700"
+            >
               Alerts
             </Link>
-            <Link to="/routes" className="hover:text-yellow-300 py-2 border-b border-gray-700">
+
+            <Link
+              to="/routes"
+              className="hover:text-yellow-300 py-2 border-b border
+            -gray-700"
+            >
               Smart Routes
             </Link>
             <Link to="/feedback" className="hover:text-yellow-300 py-2">

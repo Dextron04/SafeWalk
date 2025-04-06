@@ -1,10 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Circle, Popup, Marker, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import React, { useState, useEffect } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  Circle,
+  Popup,
+  Marker,
+  useMap,
+} from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -45,7 +52,7 @@ export default function MapView() {
         );
 
         if (!response.ok) {
-          throw new Error('Failed to fetch 911 calls data');
+          throw new Error("Failed to fetch 911 calls data");
         }
 
         const data = await response.json();
@@ -62,8 +69,8 @@ export default function MapView() {
         setHotspots(data.hotspots);
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching 911 calls:', err);
-        setError('Failed to load 911 call data. Please try again later.');
+        console.error("Error fetching 911 calls:", err);
+        setError("Failed to load 911 call data. Please try again later.");
         setLoading(false);
       }
     };
@@ -76,13 +83,12 @@ export default function MapView() {
     return () => clearInterval(intervalId);
   }, []);
 
-  // Get color based on call count
   const getHotspotColor = (count) => {
-    if (count >= 20) return 'red';
-    if (count >= 15) return 'orange';
-    if (count >= 10) return 'yellow';
-    if (count >= 5) return 'blue';
-    return 'green';
+    if (count >= 20) return "#991B1B"; // red-800 - highest intensity
+    if (count >= 15) return "#DC2626"; // red-600
+    if (count >= 10) return "#F97316"; // orange-500
+    if (count >= 5) return "#F59E0B"; // amber-500
+    return "#22C55E"; // green-500 - lowest intensity
   };
 
   // Get radius based on call count - directly proportional to frequency
@@ -133,31 +139,70 @@ export default function MapView() {
               color: getHotspotColor(hotspot.count),
               fillColor: getHotspotColor(hotspot.count),
               fillOpacity: 0.5,
-              weight: 2
+              weight: 2,
             }}
           >
             <Popup>
               <div className="p-2">
                 <h3 className="font-bold">Hotspot Area</h3>
-                <p><span className="font-semibold">Call Count:</span> {hotspot.count}</p>
-                <p><span className="font-semibold">Location:</span> {hotspot.calls[0]?.intersection_name || 'Unknown'}</p>
-                <p className="text-xs text-gray-500 mt-2">This area has a high concentration of 911 calls.</p>
+                <p>
+                  <span className="font-semibold">Call Count:</span>{" "}
+                  {hotspot.count}
+                </p>
+                <p>
+                  <span className="font-semibold">Location:</span>{" "}
+                  {hotspot.calls[0]?.intersection_name || "Unknown"}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  This area has a high concentration of 911 calls.
+                </p>
               </div>
             </Popup>
           </Circle>
         ))}
-
-        <Marker position={mapCenter}>
-          <Popup>
-            <div className="p-2">
-              <h3 className="font-bold">San Francisco 911 Call Hotspots</h3>
-              <p className="text-sm">The colored circles represent areas with 911 calls. Larger circles indicate higher frequency.</p>
-              <p className="text-xs text-gray-500 mt-2">Red: 20+ calls, Orange: 15+ calls, Yellow: 10+ calls, Blue: 5+ calls, Green: 1-4 calls</p>
-              <p className="text-xs text-gray-500 mt-1">Circle size is proportional to call frequency.</p>
-            </div>
-          </Popup>
-        </Marker>
       </MapContainer>
+
+      {/* Fixed legend positioned in viewport, not just in map */}
+      <div className="fixed bottom-6 right-6 bg-white p-3 rounded-lg shadow-lg z-50 max-w-xs opacity-90 hover:opacity-100 transition-opacity">
+        <h3 className="font-bold text-gray-800 mb-2">SF 911 Call Hotspots</h3>
+        <div className="space-y-1">
+          <div className="flex items-center">
+            <div
+              className="w-4 h-4 rounded-full mr-2"
+              style={{ backgroundColor: "#991B1B" }}
+            ></div>
+            <span className="text-xs">Dark Red: 20+ calls</span>
+          </div>
+          <div className="flex items-center">
+            <div
+              className="w-4 h-4 rounded-full mr-2"
+              style={{ backgroundColor: "#DC2626" }}
+            ></div>
+            <span className="text-xs">Red: 15+ calls</span>
+          </div>
+          <div className="flex items-center">
+            <div
+              className="w-4 h-4 rounded-full mr-2"
+              style={{ backgroundColor: "#F97316" }}
+            ></div>
+            <span className="text-xs">Orange: 10+ calls</span>
+          </div>
+          <div className="flex items-center">
+            <div
+              className="w-4 h-4 rounded-full mr-2"
+              style={{ backgroundColor: "#F59E0B" }}
+            ></div>
+            <span className="text-xs">Yellow: 5+ calls</span>
+          </div>
+          <div className="flex items-center">
+            <div
+              className="w-4 h-4 rounded-full mr-2"
+              style={{ backgroundColor: "#22C55E" }}
+            ></div>
+            <span className="text-xs">Green: 1-4 calls</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
