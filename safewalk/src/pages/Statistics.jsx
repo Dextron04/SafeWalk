@@ -28,7 +28,7 @@ export default function Statistics() {
   });
 
   const fetchCrimeData = async () => {
-    const API_URL = `http://localhost:5000/api/911calls`;
+    const API_URL = `${import.meta.env.VITE_API_URL}/api/911calls`;
 
     try {
       const response = await fetch(API_URL);
