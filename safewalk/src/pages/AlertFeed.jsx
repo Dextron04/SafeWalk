@@ -8,6 +8,7 @@ export default function AlertFeed() {
   const [timeRange, setTimeRange] = useState('All');
   const [agencyFilter, setAgencyFilter] = useState('All');
   const [callTypeFilter, setCallTypeFilter] = useState('All');
+  const [filteredAlerts, setFilteredAlerts] = useState([]);
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -82,7 +83,7 @@ export default function AlertFeed() {
     return groups;
   }, {});
 
-  const priorityOrder = ['A', 'B', 'C', 'D', 'E'];
+  const priority = ['A', 'B', 'C', 'D', 'E'];
 
   const allAgencies = ['All', ...new Set(alerts.map((a) => a.agency).filter(Boolean))];
   const allCallTypes = ['All', ...new Set(alerts.map((a) => a.callType).filter(Boolean))];
