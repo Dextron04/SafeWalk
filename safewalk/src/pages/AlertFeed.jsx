@@ -27,7 +27,12 @@ export default function AlertFeed() {
     const fetchCalls = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:5000/api/911calls?format=calls`);
+
+        console.log('Fetching 911 calls from server API');
+        console.log(import.meta.env.VITE_API_URL);
+        
+        
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/911calls?format=calls`);
         if (!response.ok) throw new Error('Failed to fetch 911 calls');
         const data = await response.json();
         setAlerts(data.calls);
