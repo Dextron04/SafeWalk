@@ -40,9 +40,14 @@ export default function AlertFeed() {
       try {
         setLoading(true);
 
+        console.log('Fetching 911 calls from server API');
+        console.log(import.meta.env.VITE_API_URL);
+        
+        
+
         // Query for 911 calls from our server API
         const response = await fetch(
-          `http://localhost:5000/api/911calls?format=calls`,
+          `${import.meta.env.VITE_API_URL}/api/911calls?format=calls`,
           {
             headers: {
               'Accept': 'application/json',

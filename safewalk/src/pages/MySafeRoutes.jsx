@@ -90,7 +90,7 @@ function RouteAlerts({ route, onAlertsFound }) {
 
         // Fetch 911 calls from our server API
         const response = await fetch(
-          `http://localhost:5000/api/911calls?format=calls`,
+          `${import.meta.env.VITE_API_URL}/api/911calls?format=calls`,
           {
             headers: {
               Accept: "application/json",
@@ -443,7 +443,7 @@ export default function MySafeRoutes() {
 
       // Fetch 911 calls from our server API
       const response = await fetch(
-        `http://localhost:5000/api/911calls?format=calls`,
+        `${import.meta.env.VITE_API_URL}/api/911calls?format=calls`,
         {
           headers: {
             Accept: "application/json",
