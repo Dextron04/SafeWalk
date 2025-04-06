@@ -447,6 +447,3 @@ IMPORTANT: Format your response using Markdown syntax. Use headings, bullet poin
     });
   }
 });
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`SafeWalk API server running on http://localhost:${PORT}`));
