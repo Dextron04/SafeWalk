@@ -307,6 +307,9 @@ export default function MySafeRoutes() {
         };
       });
 
+      console.log("Routes:", JSON.stringify(allRoutes, null, 2));
+
+
       setRoutes(allRoutes);
 
       // Set start and end locations for markers
@@ -640,6 +643,7 @@ export default function MySafeRoutes() {
                   startLocation={startLocation}
                   endLocation={endLocation}
                   expandedRouteIndex={expandedRouteIndex}
+                  allRoutes={routes}
                 />
               </div>
             )}

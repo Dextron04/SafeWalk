@@ -236,8 +236,21 @@ app.get('/api/911calls', async (req, res) => {
 app.post('/api/route-assistant', async (req, res) => {
   const { selectedRoute, allRoutes, routeAlerts, userLocation, startLocation, endLocation, userQuery } = req.body;
 
-  console.log("all routes data: ", allRoutes);
-
+  console.log("Received route data from client:", {
+    selectedRoute: selectedRoute ? {
+      distance: selectedRoute.distance,
+      duration: selectedRoute.duration,
+      summary: selectedRoute.summary,
+      warnings: selectedRoute.warnings,
+      hasSteps: selectedRoute.steps ? true : false
+    } : null,
+    allRoutesCount: allRoutes ? allRoutes.length : 0,
+    routeAlertsCount: routeAlerts ? routeAlerts.length : 0,
+    userLocation: userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null,
+    startLocation: startLocation ? { address: startLocation.address } : null,
+    endLocation: endLocation ? { address: endLocation.address } : null,
+    userQuery
+  });
 
   if (!selectedRoute || !userQuery) {
     return res.status(400).json({ error: 'Route and user query are required' });
@@ -264,9 +277,19 @@ app.post('/api/route-assistant', async (req, res) => {
     // Add information about alternative routes
     let alternativeRoutesInfo = '';
     if (allRoutes && allRoutes.length > 1) {
-      alternativeRoutesInfo = `\n\nAlternative Routes Available:\n${allRoutes.map((route, index) =>
-        `Route ${index + 1}: ${route.distance}, ${route.duration}${route.warnings && route.warnings.length > 0 ? ` (Warnings: ${route.warnings.join(', ')})` : ''}`
-      ).join('\n')}`;
+      alternativeRoutesInfo = `\n\nAlternative Routes Available:\n${allRoutes.map((route, index) => {
+        let routeInfo = `Route ${index + 1}: ${route.distance}, ${route.duration}`;
+
+        if (route.summary) {
+          routeInfo += `\n   Summary: ${route.summary}`;
+        }
+
+        if (route.warnings && route.warnings.length > 0) {
+          routeInfo += `\n   Warnings: ${route.warnings.join(', ')}`;
+        }
+
+        return routeInfo;
+      }).join('\n\n')}`;
     }
 
     // Add detailed information about 911 calls within 0.2 mile radius from the past 24 hours
@@ -298,8 +321,9 @@ app.post('/api/route-assistant', async (req, res) => {
         const typeInfo = alert.callType ? `Type: ${alert.callType}` : '';
         const descriptionInfo = alert.description && alert.description !== alert.callType ? `Description: ${alert.description}` : '';
         const distanceInfo = alert.distance ? `Distance from route: ${alert.distance}` : '';
+        const timeOfDayInfo = alert.timeOfDay ? `Time of day: ${alert.timeOfDay}` : '';
 
-        return `${index + 1}. ${[typeInfo, timeInfo, locationInfo, distanceInfo, descriptionInfo]
+        return `${index + 1}. ${[typeInfo, timeInfo, timeOfDayInfo, locationInfo, distanceInfo, descriptionInfo]
           .filter(Boolean)
           .join(' | ')}`;
       }).join('\n')}`;

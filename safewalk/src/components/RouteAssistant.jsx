@@ -26,6 +26,9 @@ export default function RouteAssistant({
     }, [messages]);
 
     useEffect(() => {
+        console.log("Routes:", JSON.stringify(allRoutes, null, 2));
+
+
         if (selectedRoute && messages.length === 0) {
             const welcomeMessage = {
                 role: 'assistant',
@@ -128,6 +131,17 @@ How can I help you with your journey today? Feel free to ask me anything about y
                 // Include all available properties
                 ...userLocation
             } : null;
+
+            // Log the data being sent to the server
+            console.log("Sending route data to AI:", {
+                selectedRoute: formattedSelectedRoute,
+                allRoutes: formattedAllRoutes,
+                routeAlerts: formattedRouteAlerts,
+                userLocation: formattedUserLocation,
+                startLocation: formattedStartLocation,
+                endLocation: formattedEndLocation,
+                userQuery: inputMessage
+            });
 
             const response = await axios.post('http://localhost:5000/api/route-assistant', {
                 selectedRoute: formattedSelectedRoute,
