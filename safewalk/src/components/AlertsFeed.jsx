@@ -24,7 +24,7 @@ export default function AlertsFeed({ userLocation }) {
       try {
         // Query for 911 calls from our server API
         const response = await fetch(
-          `http://localhost:5000/api/911calls?format=calls`
+          `${import.meta.env.VITE_API_URL}/api/911calls?format=calls`
         );
 
         if (!response.ok) {

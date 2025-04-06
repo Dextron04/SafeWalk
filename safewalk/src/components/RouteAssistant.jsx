@@ -143,7 +143,7 @@ How can I help you with your journey today? Feel free to ask me anything about y
                 userQuery: inputMessage
             });
 
-            const response = await axios.post('http://localhost:5000/api/route-assistant', {
+            const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/route-assistant`, {
                 selectedRoute: formattedSelectedRoute,
                 allRoutes: formattedAllRoutes,
                 routeAlerts: formattedRouteAlerts,
