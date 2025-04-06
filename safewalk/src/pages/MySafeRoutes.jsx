@@ -313,7 +313,7 @@ export default function MySafeRoutes() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}api/directions`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/directions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
