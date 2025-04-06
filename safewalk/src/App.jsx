@@ -2,7 +2,7 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/home';
-import MapView from './components/mapview';
+import MapView from './components/MapView';
 import Statics from './pages/statics';
 import HelpCenter from './pages/HelpCenter';
 import AlertFeed from './pages/AlertFeed';
