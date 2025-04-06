@@ -48,7 +48,7 @@ export default function MapView() {
 
         // Query for hotspots from our server API
         const response = await fetch(
-          `http://localhost:5000/api/911calls?format=hotspots&limit=1000`
+          `${import.meta.env.VITE_API_URL}/api/911calls?format=hotspots&limit=1000`
         );
 
         if (!response.ok) {

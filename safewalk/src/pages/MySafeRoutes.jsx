@@ -539,7 +539,7 @@ export default function MySafeRoutes() {
       } catch (error) {
         console.error("Error during initial alert fetch:", error);
       }
-    }, 5000); // 5 second delay to ensure map is fully loaded
+    }, 50); // 5 second delay to ensure map is fully loaded
 
     // Set up periodic refresh
     const intervalId = setInterval(() => {
