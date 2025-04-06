@@ -14,6 +14,56 @@ import {
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 export default function Statistics() {
+  const [chartData, setChartData] = useState({
+    labels: [],
+    datasets: [
+      {
+        label: '911 Calls by Type of Crime',
+        data: [],
+        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+        borderColor: 'rgb(255, 99, 132)',
+        borderWidth: 1,
+      },
+    ],
+  });
+
+  const fetchCrimeData = async () => {
+    const API_URL = `http://localhost:5000/api/911calls`;
+
+    try {
+      const response = await fetch(API_URL);
+      const data = await response.json();
+
+      const crimeCounts = {};
+      data.calls.forEach(call => {
+        const type = call.callType || 'Unknown';
+        crimeCounts[type] = (crimeCounts[type] || 0) + 1;
+      });
+
+      const sortedTypes = Object.entries(crimeCounts).sort((a, b) => b[1] - a[1]);
+      const labels = sortedTypes.map(([type]) => type);
+      const counts = sortedTypes.map(([, count]) => count);
+
+      setChartData({
+        labels,
+        datasets: [
+          {
+            label: '911 Calls by Type of Crime',
+            data: counts,
+            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+            borderColor: 'rgb(255, 99, 132)',
+            borderWidth: 1,
+          },
+        ],
+      });
+    } catch (error) {
+      console.error('Error fetching crime data:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchCrimeData();
+  }, []);
   return (
     <div className="bg-gray-900 text-white min-h-screen p-5 sm:p-10 font-sans">
       <div className="max-w-6xl mx-auto space-y-10 sm:space-y-12">
