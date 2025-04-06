@@ -32,7 +32,7 @@ export default function Navbar() {
           <Link to="/map" className={isActive("/map")}>
             Map
           </Link>
-          <Link to="/statistics" className={isActive("/statics")}>
+          <Link to="/statistics" className={isActive("/statistics")}>
             Statistics
           </Link>
           <Link to="/help" className={isActive("/help")}>
