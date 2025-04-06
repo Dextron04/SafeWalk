@@ -37,7 +37,6 @@ const incidentIcon = new L.Icon({
 });
 
 // Route colors for different routes
-const ROUTE_COLORS = ["#4CAF50", "#9C27B0", "#2196F3", "#FF9800", "#E91E63"];
 const SELECTED_ROUTE_COLOR = "#00C853"; // More vibrant green
 const UNSELECTED_ROUTE_COLOR = "#616161"; // More muted grey
 
@@ -55,7 +54,7 @@ function MapController({ userLocation }) {
 }
 
 // Component to display alerts along a route
-function RouteAlerts({ route }) {
+function RouteAlerts({ route, onAlertsFound }) {
   const [routeAlerts, setRouteAlerts] = useState([]);
   const [loading, setLoading] = useState(false);
   const map = useMap();
@@ -121,6 +120,13 @@ function RouteAlerts({ route }) {
 
         console.log(`Found ${nearbyAlerts.length} 911 calls along the route`);
         setRouteAlerts(nearbyAlerts);
+        
+        // Call the callback to pass alerts to parent component
+        if (onAlertsFound) {
+          onAlertsFound(nearbyAlerts);
+        }
+        
+        console.log(`Route alerts:`, nearbyAlerts);
       } catch (err) {
         console.error("Error fetching route alerts:", err);
       } finally {
@@ -134,7 +140,7 @@ function RouteAlerts({ route }) {
     const intervalId = setInterval(fetchRouteAlerts, 120 * 1000);
 
     return () => clearInterval(intervalId);
-  }, [route, map]);
+  }, [route, map, onAlertsFound]);
 
   if (loading) return null;
 
@@ -343,7 +349,7 @@ export default function MySafeRoutes() {
         };
       });
 
-      console.log("Routes:", JSON.stringify(allRoutes, null, 2));
+      // console.log("Routes:", JSON.stringify(allRoutes, null, 2));
 
 
       setRoutes(allRoutes);
@@ -470,6 +476,7 @@ export default function MySafeRoutes() {
 
       console.log(`Found ${nearbyAlerts.length} 911 calls along the route`);
       setRouteAlerts(nearbyAlerts);
+      
     } catch (err) {
       console.error("Error fetching route alerts:", err);
     }
@@ -690,7 +697,10 @@ export default function MySafeRoutes() {
                 )}
 
                 {showRouteAlerts && routes.length > 0 && (
-                  <RouteAlerts route={routes[selectedRouteIndex]} />
+                  <RouteAlerts 
+                    route={routes[selectedRouteIndex]} 
+                    onAlertsFound={setRouteAlerts}
+                  />
                 )}
               </MapContainer>
             </div>
