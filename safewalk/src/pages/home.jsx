@@ -49,7 +49,7 @@ export default function Home() {
           </p>
         </motion.div>
 
-        {/* Core Features */}
+        {/* Feature Highlights */}
         <div className="grid md:grid-cols-2 gap-6">
           {[
             {
@@ -87,17 +87,19 @@ export default function Home() {
           ))}
         </div>
 
-        {/* User Impact Section */}
+        {/* Real User Questions Section */}
         <motion.div
           className="bg-gray-800 border border-gray-700 p-6 rounded-2xl text-center shadow-md"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
         >
-          <h2 className="text-2xl font-bold text-blue-300 mb-2">💬 Trusted by Communities</h2>
-          <p className="text-gray-300 max-w-2xl mx-auto">
-            “I used to avoid night walks in my city. SafeWalk helped me feel confident again. The alerts are accurate and timely!”<br />
-            <span className="italic text-sm text-gray-500">— Jasmine R., San Francisco</span>
+          <h2 className="text-2xl font-bold text-blue-300 mb-2">💬 Inspired by Real Questions</h2>
+          <p className="text-gray-300 max-w-2xl mx-auto space-y-2">
+            “Is there a way to know which streets are safest to walk on at night?”<br />
+            “Why doesn’t Google Maps tell me which areas have crime or poor lighting?”<br />
+            “I wish there was an app that told me where it’s safe to walk when I’m alone.”<br />
+            <span className="italic text-sm text-gray-500">— Real concerns from everyday people</span>
           </p>
         </motion.div>
 
