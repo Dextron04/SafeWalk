@@ -290,6 +290,24 @@ How can I help you with your journey today? Feel free to ask me anything about y
                     flex: 1;
                     overflow-y: auto;
                     padding: 1rem;
+                    display: flex;
+                    flex-direction: column;
+                    max-height: 400px; /* Set a fixed height for the container */
+                    scrollbar-width: thin;
+                    scrollbar-color: #3d3d3d #1a1a1a;
+                }
+
+                .messages-container::-webkit-scrollbar {
+                    width: 8px;
+                }
+
+                .messages-container::-webkit-scrollbar-track {
+                    background: #1a1a1a;
+                }
+
+                .messages-container::-webkit-scrollbar-thumb {
+                    background-color: #3d3d3d;
+                    border-radius: 4px;
                 }
 
                 .empty-state {
@@ -301,6 +319,7 @@ How can I help you with your journey today? Feel free to ask me anything about y
                 .message {
                     margin-bottom: 1rem;
                     max-width: 80%;
+                    word-wrap: break-word; /* Ensure long messages wrap properly */
                 }
 
                 .message.user {
@@ -419,4 +438,4 @@ How can I help you with your journey today? Feel free to ask me anything about y
             `}</style>
         </div>
     );
-} 
+}
