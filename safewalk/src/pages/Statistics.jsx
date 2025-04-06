@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import chart from '../assets/output.png'; // Your pie chart image
 
-export default function Statics() {
+export default function Statistics() {
   return (
     <div className="bg-gray-900 text-white min-h-screen p-10 font-sans">
       <div className="max-w-5xl mx-auto space-y-12">

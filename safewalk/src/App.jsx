@@ -3,7 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/home';
 import MapView from './components/MapView';
-import Statics from './pages/statics';
+import Statistics from './pages/Statistics';
 import HelpCenter from './pages/HelpCenter';
 import AlertFeed from './pages/AlertFeed';
 import SFTransitRouteFinder from './pages/MySafeRoutes';
@@ -16,7 +16,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/map" element={<MapView />} />
-        <Route path="/statistics" element={<Statics />} />
+        <Route path="/statistics" element={<Statistics />} />
         <Route path="/help" element={<HelpCenter />} />
         <Route path="/alerts" element={<AlertFeed />} />
         <Route path="/routes" element={<SFTransitRouteFinder />} />
