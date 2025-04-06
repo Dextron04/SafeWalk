@@ -15,15 +15,7 @@ import Home from './pages/home.jsx';
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<App />} />
-        <Route path="/alerts" element={<AlertFeed />} />
-        <Route path="/routes" element={<MySafeRoutes />} />
-        <Route path="/help" element={<HelpCenter />} />
-        <Route path="/statics" element={<Statics />} />
-        <Route path="/" element={<Home />} />
-        {/* Add more routes as needed */}
-      </Routes>
+      <App/>
     </BrowserRouter>
   </React.StrictMode>
 );
