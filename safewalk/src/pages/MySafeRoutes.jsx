@@ -747,10 +747,41 @@ export default function MySafeRoutes() {
                         </div>
                       </div>
                       
-                      {/* Route details section - unchanged */}
+                      {/* Route details section - add back the content */}
                       {expandedRouteIndex === index && (
                         <div className="p-3 sm:p-4 border-t border-gray-700">
-                          {/* ... existing route details ... */}
+                          {route.warnings.length > 0 && (
+                            <div className="bg-yellow-900 text-yellow-200 p-2 sm:p-3 rounded-lg mb-3 sm:mb-4 text-sm">
+                              <h3 className="font-semibold">Warnings:</h3>
+                              <ul className="list-disc pl-4">
+                                {route.warnings.map((warning, idx) => (
+                                  <li key={idx}>{warning}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                            {route.steps.map((step, idx) => (
+                              <div
+                                key={idx}
+                                className="bg-gray-700 p-2 sm:p-3 rounded-lg"
+                              >
+                                <p className="text-xs sm:text-sm text-gray-200 mb-1">
+                                  <strong>{step.index}.</strong>{" "}
+                                  <span
+                                    dangerouslySetInnerHTML={{
+                                      __html: step.instruction,
+                                    }}
+                                  />
+                                </p>
+                                <div className="text-xs text-gray-400 mt-1">
+                                  Distance: {step.distance} • Duration:{" "}
+                                  {step.duration}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
