@@ -49,7 +49,6 @@ export default function Home() {
           </p>
         </motion.div>
 
-        {/* Core Features */}
         <div className="grid md:grid-cols-2 gap-6">
           {[
             {

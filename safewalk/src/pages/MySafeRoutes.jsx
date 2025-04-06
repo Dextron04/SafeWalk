@@ -1,44 +1,30 @@
-import React, { useState, useEffect, useRef } from "react";
-import {
-  MapContainer,
-  TileLayer,
-  Polyline,
-  Marker,
-  Popup,
-  useMap,
-  Circle,
-} from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
-import AlertsFeed from "../components/AlertsFeed";
-import RouteAssistant from "../components/RouteAssistant";
+import React, { useState, useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap, Circle } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import AlertsFeed from '../components/AlertsFeed';
+import RouteAssistant from '../components/RouteAssistant';
 
 // Fix for Leaflet marker icons
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-  iconUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
 // Custom marker icon for incidents
 const incidentIcon = new L.Icon({
-  iconUrl:
-    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
-  shadowSize: [41, 41],
+  shadowSize: [41, 41]
 });
 
 // Route colors for different routes
-const SELECTED_ROUTE_COLOR = "#00C853"; // More vibrant green
-const UNSELECTED_ROUTE_COLOR = "#616161"; // More muted grey
+const ROUTE_COLORS = ['#00FF00', '#FF0000', '#0000FF', '#FFA500', '#800080'];
 
 // Component to handle map reference
 function MapController({ userLocation }) {
@@ -54,7 +40,7 @@ function MapController({ userLocation }) {
 }
 
 // Component to display alerts along a route
-function RouteAlerts({ route, onAlertsFound }) {
+function RouteAlerts({ route }) {
   const [routeAlerts, setRouteAlerts] = useState([]);
   const [loading, setLoading] = useState(false);
   const map = useMap();
@@ -62,18 +48,12 @@ function RouteAlerts({ route, onAlertsFound }) {
   // Get priority color
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case "A":
-        return "bg-red-500"; // Highest priority
-      case "B":
-        return "bg-orange-500";
-      case "C":
-        return "bg-yellow-500";
-      case "D":
-        return "bg-blue-500";
-      case "E":
-        return "bg-green-500"; // Lowest priority
-      default:
-        return "bg-gray-500";
+      case 'A': return 'bg-red-500'; // Highest priority
+      case 'B': return 'bg-orange-500';
+      case 'C': return 'bg-yellow-500';
+      case 'D': return 'bg-blue-500';
+      case 'E': return 'bg-green-500'; // Lowest priority
+      default: return 'bg-gray-500';
     }
   };
 
@@ -93,22 +73,22 @@ function RouteAlerts({ route, onAlertsFound }) {
           `http://localhost:5000/api/911calls?format=calls`,
           {
             headers: {
-              Accept: "application/json",
-            },
+              'Accept': 'application/json',
+            }
           }
         );
 
         if (!response.ok) {
-          throw new Error("Failed to fetch 911 calls");
+          throw new Error('Failed to fetch 911 calls');
         }
 
         const data = await response.json();
         console.log(`Fetched ${data.totalCalls} 911 calls for route analysis`);
 
         // Filter alerts that are within 0.2 miles of any sampled point
-        const nearbyAlerts = data.calls.filter((alert) => {
+        const nearbyAlerts = data.calls.filter(alert => {
           // Check if alert is within 0.2 miles of any sampled point
-          return sampledPoints.some((point) => {
+          return sampledPoints.some(point => {
             const distance = map.distance(
               [point[0], point[1]],
               [alert.latitude, alert.longitude]
@@ -120,15 +100,8 @@ function RouteAlerts({ route, onAlertsFound }) {
 
         console.log(`Found ${nearbyAlerts.length} 911 calls along the route`);
         setRouteAlerts(nearbyAlerts);
-        
-        // Call the callback to pass alerts to parent component
-        if (onAlertsFound) {
-          onAlertsFound(nearbyAlerts);
-        }
-        
-        console.log(`Route alerts:`, nearbyAlerts);
       } catch (err) {
-        console.error("Error fetching route alerts:", err);
+        console.error('Error fetching route alerts:', err);
       } finally {
         setLoading(false);
       }
@@ -140,13 +113,13 @@ function RouteAlerts({ route, onAlertsFound }) {
     const intervalId = setInterval(fetchRouteAlerts, 120 * 1000);
 
     return () => clearInterval(intervalId);
-  }, [route, map, onAlertsFound]);
+  }, [route, map]);
 
   if (loading) return null;
 
   return (
     <>
-      {routeAlerts.map((alert) => (
+      {routeAlerts.map(alert => (
         <Marker
           key={alert.id}
           position={[alert.latitude, alert.longitude]}
@@ -158,26 +131,12 @@ function RouteAlerts({ route, onAlertsFound }) {
               <p className="text-sm">{alert.location}</p>
               <p className="text-xs text-gray-500">{alert.time}</p>
               <div className="text-xs mt-1">
-                <p>
-                  <span className="font-semibold">Priority:</span>{" "}
-                  <span
-                    className={`inline-block w-3 h-3 rounded-full mr-1 ${getPriorityColor(
-                      alert.priority
-                    )}`}
-                  ></span>{" "}
-                  {alert.priority}
-                </p>
-                <p>
-                  <span className="font-semibold">Agency:</span> {alert.agency}
-                </p>
-                {alert.sensitive && (
-                  <p className="text-red-500 font-semibold">Sensitive Call</p>
-                )}
+                <p><span className="font-semibold">Priority:</span> <span className={`inline-block w-3 h-3 rounded-full mr-1 ${getPriorityColor(alert.priority)}`}></span> {alert.priority}</p>
+                <p><span className="font-semibold">Agency:</span> {alert.agency}</p>
+                {alert.sensitive && <p className="text-red-500 font-semibold">Sensitive Call</p>}
               </div>
               {alert.isFuture && (
-                <p className="text-xs text-yellow-500 mt-1 italic">
-                  Note: This is test data with a future date
-                </p>
+                <p className="text-xs text-yellow-500 mt-1 italic">Note: This is test data with a future date</p>
               )}
             </div>
           </Popup>
@@ -188,8 +147,8 @@ function RouteAlerts({ route, onAlertsFound }) {
 }
 
 export default function MySafeRoutes() {
-  const [origin, setOrigin] = useState("");
-  const [destination, setDestination] = useState("");
+  const [origin, setOrigin] = useState('');
+  const [destination, setDestination] = useState('');
   const [routes, setRoutes] = useState([]);
   const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -221,14 +180,12 @@ export default function MySafeRoutes() {
             setLocationError(null);
           },
           (error) => {
-            console.error("Error getting location:", error);
-            setLocationError(
-              "Unable to get your location. Please enable location services."
-            );
+            console.error('Error getting location:', error);
+            setLocationError('Unable to get your location. Please enable location services.');
           }
         );
       } else {
-        setLocationError("Geolocation is not supported by your browser.");
+        setLocationError('Geolocation is not supported by your browser.');
       }
     };
 
@@ -246,7 +203,7 @@ export default function MySafeRoutes() {
       if (window.google && window.google.maps && window.google.maps.places) {
         initAutocomplete();
       } else {
-        const script = document.createElement("script");
+        const script = document.createElement('script');
         // Use a direct API key value
         script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyAbhHlHyUaD3PLPfLolagQWQrcfeZO4fHA&libraries=places`;
         script.async = true;
@@ -263,19 +220,21 @@ export default function MySafeRoutes() {
 
   const initAutocomplete = () => {
     if (!window.google || !window.google.maps || !window.google.maps.places) {
-      console.error("Google Maps API not loaded");
+      console.error('Google Maps API not loaded');
       return;
     }
 
     // Initialize origin autocomplete
     if (originInputRef.current) {
-      originAutocompleteRef.current =
-        new window.google.maps.places.Autocomplete(originInputRef.current, {
-          componentRestrictions: { country: "us" },
-          fields: ["address_components", "geometry", "formatted_address"],
-          types: ["geocode"], // Use a single type to avoid the error
-        });
-      originAutocompleteRef.current.addListener("place_changed", () => {
+      originAutocompleteRef.current = new window.google.maps.places.Autocomplete(
+        originInputRef.current,
+        {
+          componentRestrictions: { country: 'us' },
+          fields: ['address_components', 'geometry', 'formatted_address'],
+          types: ['geocode'], // Use a single type to avoid the error
+        }
+      );
+      originAutocompleteRef.current.addListener('place_changed', () => {
         const place = originAutocompleteRef.current.getPlace();
         if (place.formatted_address) {
           setOrigin(place.formatted_address);
@@ -285,16 +244,15 @@ export default function MySafeRoutes() {
 
     // Initialize destination autocomplete
     if (destinationInputRef.current) {
-      destinationAutocompleteRef.current =
-        new window.google.maps.places.Autocomplete(
-          destinationInputRef.current,
-          {
-            componentRestrictions: { country: "us" },
-            fields: ["address_components", "geometry", "formatted_address"],
-            types: ["geocode"], // Use a single type to avoid the error
-          }
-        );
-      destinationAutocompleteRef.current.addListener("place_changed", () => {
+      destinationAutocompleteRef.current = new window.google.maps.places.Autocomplete(
+        destinationInputRef.current,
+        {
+          componentRestrictions: { country: 'us' },
+          fields: ['address_components', 'geometry', 'formatted_address'],
+          types: ['geocode'], // Use a single type to avoid the error
+        }
+      );
+      destinationAutocompleteRef.current.addListener('place_changed', () => {
         const place = destinationAutocompleteRef.current.getPlace();
         if (place.formatted_address) {
           setDestination(place.formatted_address);
@@ -313,10 +271,10 @@ export default function MySafeRoutes() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/directions", {
-        method: "POST",
+      const response = await fetch('http://localhost:5000/api/directions', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ origin, destination }),
       });
@@ -349,9 +307,6 @@ export default function MySafeRoutes() {
         };
       });
 
-      // console.log("Routes:", JSON.stringify(allRoutes, null, 2));
-
-
       setRoutes(allRoutes);
 
       // Set start and end locations for markers
@@ -362,12 +317,13 @@ export default function MySafeRoutes() {
       const bounds = data.routes[0].bounds;
       const center = [
         (bounds.northeast.lat + bounds.southwest.lat) / 2,
-        (bounds.northeast.lng + bounds.southwest.lng) / 2,
+        (bounds.northeast.lng + bounds.southwest.lng) / 2
       ];
       setMapCenter(center);
 
       // Select the first route by default
       setSelectedRouteIndex(0);
+
     } catch (error) {
       console.error("API error:", error);
       alert("Failed to fetch directions.");
@@ -379,20 +335,16 @@ export default function MySafeRoutes() {
   // Decodes an encoded polyline string into an array of [lat, lng] coordinates.
   const decodePolyline = (encoded) => {
     let points = [];
-    let index = 0,
-      lat = 0,
-      lng = 0;
+    let index = 0, lat = 0, lng = 0;
 
     while (index < encoded.length) {
-      let b,
-        shift = 0,
-        result = 0;
+      let b, shift = 0, result = 0;
       do {
         b = encoded.charCodeAt(index++) - 63;
         result |= (b & 0x1f) << shift;
         shift += 5;
       } while (b >= 0x20);
-      let dlat = result & 1 ? ~(result >> 1) : result >> 1;
+      let dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
       lat += dlat;
 
       shift = 0;
@@ -402,7 +354,7 @@ export default function MySafeRoutes() {
         result |= (b & 0x1f) << shift;
         shift += 5;
       } while (b >= 0x20);
-      let dlng = result & 1 ? ~(result >> 1) : result >> 1;
+      let dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
       lng += dlng;
 
       points.push([lat / 1e5, lng / 1e5]);
@@ -412,21 +364,8 @@ export default function MySafeRoutes() {
   };
 
   const handleRouteSelect = (index) => {
-    // Force re-render of the map by using a little state update trick
-    setRoutes((prevRoutes) => {
-      // No need to actually modify the routes, just return the same array
-      // The key point is that calling this setter will trigger a re-render
-      return [...prevRoutes];
-    });
-
-    // Update the selected route index
     setSelectedRouteIndex(index);
-
-    // No longer automatically expand the route details
-    // Only the toggle button should control this now
-
-    // Log for debug
-    console.log(`Selected route ${index} - should show as green`);
+    setExpandedRouteIndex(index);
   };
 
   const toggleRouteExpansion = (index) => {
@@ -446,25 +385,25 @@ export default function MySafeRoutes() {
         `http://localhost:5000/api/911calls?format=calls`,
         {
           headers: {
-            Accept: "application/json",
-          },
+            'Accept': 'application/json',
+          }
         }
       );
 
       if (!response.ok) {
-        throw new Error("Failed to fetch 911 calls");
+        throw new Error('Failed to fetch 911 calls');
       }
 
       const data = await response.json();
       console.log(`Fetched ${data.totalCalls} 911 calls for route analysis`);
 
       // Filter alerts that are within 0.2 miles of any sampled point
-      const map = document.querySelector(".leaflet-container")?._leaflet_map;
+      const map = document.querySelector('.leaflet-container')?._leaflet_map;
       if (!map) return;
 
-      const nearbyAlerts = data.calls.filter((alert) => {
+      const nearbyAlerts = data.calls.filter(alert => {
         // Check if alert is within 0.2 miles of any sampled point
-        return sampledPoints.some((point) => {
+        return sampledPoints.some(point => {
           const distance = map.distance(
             [point[0], point[1]],
             [alert.latitude, alert.longitude]
@@ -476,9 +415,8 @@ export default function MySafeRoutes() {
 
       console.log(`Found ${nearbyAlerts.length} 911 calls along the route`);
       setRouteAlerts(nearbyAlerts);
-      
     } catch (err) {
-      console.error("Error fetching route alerts:", err);
+      console.error('Error fetching route alerts:', err);
     }
   };
 
@@ -492,14 +430,9 @@ export default function MySafeRoutes() {
   return (
     <div className="bg-gray-950 text-white min-h-screen p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-yellow-400 mb-4">
-          🚍 SF Transit Directions
-        </h1>
+        <h1 className="text-3xl font-bold text-yellow-400 mb-4">🚍 SF Transit Directions</h1>
 
-        <form
-          onSubmit={handleFindRoute}
-          className="flex flex-col md:flex-row gap-4 mb-6"
-        >
+        <form onSubmit={handleFindRoute} className="flex flex-col md:flex-row gap-4 mb-6">
           <input
             ref={originInputRef}
             type="text"
@@ -518,10 +451,7 @@ export default function MySafeRoutes() {
             className="p-3 bg-gray-800 rounded text-white w-full"
             required
           />
-          <button
-            type="submit"
-            className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold px-6 py-3 rounded"
-          >
+          <button type="submit" className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold px-6 py-3 rounded">
             {loading ? "Finding..." : "Get Directions"}
           </button>
         </form>
@@ -530,76 +460,40 @@ export default function MySafeRoutes() {
           <div className="lg:w-2/3">
             {routes.length > 0 && (
               <div className="mb-6">
-                <h2 className="text-xl font-semibold text-yellow-400 mb-3">
-                  Available Routes
-                </h2>
+                <h2 className="text-xl font-semibold text-yellow-400 mb-3">Available Routes</h2>
                 <div className="flex flex-col gap-3">
                   {routes.map((route, index) => (
-                    <div
-                      key={index}
-                      className="bg-gray-800 rounded-lg overflow-hidden"
-                    >
-                      <div className="p-4 flex items-center justify-between">
+                    <div key={index} className="bg-gray-800 rounded-lg overflow-hidden">
+                      <div
+                        className="p-4 flex items-center justify-between cursor-pointer"
+                        onClick={() => toggleRouteExpansion(index)}
+                      >
                         <div className="flex items-center">
                           <div
-                            className="w-5 h-5 rounded-full mr-3 transition-transform duration-300"
-                            style={{
-                              backgroundColor:
-                                selectedRouteIndex === index
-                                  ? SELECTED_ROUTE_COLOR
-                                  : UNSELECTED_ROUTE_COLOR,
-                              transform:
-                                selectedRouteIndex === index
-                                  ? "scale(1.2)"
-                                  : "scale(1)",
-                            }}
+                            className="w-4 h-4 rounded-full mr-2"
+                            style={{ backgroundColor: ROUTE_COLORS[index % ROUTE_COLORS.length] }}
                           ></div>
-                          <div>
-                            <span className="font-medium text-lg">
-                              Route {index + 1}
-                            </span>
-                            <span className="ml-2 text-sm text-gray-400">
-                              ({route.distance} • {route.duration})
-                            </span>
-                          </div>
+                          <span className="font-medium">Route {index + 1}</span>
+                          <span className="ml-2 text-sm text-gray-400">
+                            ({route.distance} • {route.duration})
+                          </span>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleRouteSelect(index);
                             }}
-                            className={`px-5 py-2.5 font-medium rounded-lg shadow-lg transition-all duration-300 
-                              ${
-                                selectedRouteIndex === index
-                                  ? "bg-gradient-to-r from-emerald-400 to-teal-500 text-white transform scale-105 border-2 border-emerald-300"
-                                  : "bg-gray-800 hover:bg-gray-700 text-gray-200 hover:text-white border-2 border-gray-700 hover:border-teal-500"
-                              }
-                              hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-teal-500 active:scale-95`}
-                          >
-                            {selectedRouteIndex === index
-                              ? "✓ Selected"
-                              : "Select Route"}
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleRouteExpansion(index);
-                            }}
-                            className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-400 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-opacity-50 transform hover:scale-105 active:scale-95 shadow-lg text-black"
-                            aria-label="Toggle route details"
-                          >
-                            <span
-                              className={`font-medium transition-transform duration-300 inline-block ${
-                                expandedRouteIndex === index
-                                  ? "transform rotate-180"
-                                  : ""
+                            className={`px-3 py-1 rounded-lg mr-2 ${selectedRouteIndex === index
+                              ? 'bg-yellow-400 text-black font-bold'
+                              : 'bg-gray-700 text-white'
                               }`}
-                            >
-                              ▼
-                            </span>
-                            <span className="font-medium">Expand</span>
+                          >
+                            Select
                           </button>
+                          <span className="text-gray-400">
+                            {expandedRouteIndex === index ? '▼' : '▶'}
+                          </span>
                         </div>
                       </div>
 
@@ -618,21 +512,13 @@ export default function MySafeRoutes() {
 
                           <div className="space-y-2">
                             {route.steps.map((step, idx) => (
-                              <div
-                                key={idx}
-                                className="bg-gray-700 p-3 rounded-lg"
-                              >
+                              <div key={idx} className="bg-gray-700 p-3 rounded-lg">
                                 <p className="text-sm text-gray-200 mb-1">
                                   <strong>{step.index}.</strong>{" "}
-                                  <span
-                                    dangerouslySetInnerHTML={{
-                                      __html: step.instruction,
-                                    }}
-                                  />
+                                  <span dangerouslySetInnerHTML={{ __html: step.instruction }} />
                                 </p>
                                 <div className="text-xs text-gray-400 mt-1">
-                                  Distance: {step.distance} • Duration:{" "}
-                                  {step.duration}
+                                  Distance: {step.distance} • Duration: {step.duration}
                                 </div>
                               </div>
                             ))}
@@ -650,7 +536,7 @@ export default function MySafeRoutes() {
                 center={mapCenter}
                 zoom={13}
                 className="h-full w-full z-0"
-                key={`${mapCenter.join(",")}-${selectedRouteIndex}`}
+                key={mapCenter.join(',')}
               >
                 <TileLayer
                   attribution="&copy; OpenStreetMap contributors"
@@ -671,12 +557,9 @@ export default function MySafeRoutes() {
                     key={index}
                     positions={route.path}
                     pathOptions={{
-                      color:
-                        selectedRouteIndex === index
-                          ? SELECTED_ROUTE_COLOR
-                          : UNSELECTED_ROUTE_COLOR,
+                      color: ROUTE_COLORS[index % ROUTE_COLORS.length],
                       weight: selectedRouteIndex === index ? 6 : 3,
-                      opacity: selectedRouteIndex === index ? 1 : 0.7,
+                      opacity: selectedRouteIndex === index ? 1 : 0.7
                     }}
                   />
                 ))}
@@ -697,10 +580,7 @@ export default function MySafeRoutes() {
                 )}
 
                 {showRouteAlerts && routes.length > 0 && (
-                  <RouteAlerts 
-                    route={routes[selectedRouteIndex]} 
-                    onAlertsFound={setRouteAlerts}
-                  />
+                  <RouteAlerts route={routes[selectedRouteIndex]} />
                 )}
               </MapContainer>
             </div>
@@ -709,56 +589,44 @@ export default function MySafeRoutes() {
           <div className="lg:w-1/3">
             <div className="bg-gray-800 p-4 rounded-lg">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-yellow-400">
-                  Safety Alerts
-                </h2>
+                <h2 className="text-xl font-semibold text-yellow-400">Safety Alerts</h2>
                 <button
                   onClick={() => setShowAlerts(!showAlerts)}
                   className="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded"
                 >
-                  {showAlerts ? "Hide" : "Show"}
+                  {showAlerts ? 'Hide' : 'Show'}
                 </button>
               </div>
 
               {locationError && (
                 <div className="bg-red-900 text-red-200 p-3 rounded-lg mb-4">
                   <p>{locationError}</p>
-                  <p className="text-sm mt-2">
-                    Enable location services to see nearby alerts.
-                  </p>
+                  <p className="text-sm mt-2">Enable location services to see nearby alerts.</p>
                 </div>
               )}
 
               {showAlerts && userLocation ? (
                 <div className="text-gray-300">
-                  <p>
-                    Alerts are displayed on the map. Toggle the "Show" button to
-                    show/hide alerts.
-                  </p>
+                  <p>Alerts are displayed on the map. Toggle the "Show" button to show/hide alerts.</p>
                 </div>
               ) : (
-                <p className="text-gray-300">
-                  Enable location services to see nearby alerts.
-                </p>
+                <p className="text-gray-300">Enable location services to see nearby alerts.</p>
               )}
             </div>
 
             {routes.length > 0 && (
               <div className="bg-gray-800 p-4 rounded-lg mt-4">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold text-yellow-400">
-                    Route Alerts
-                  </h2>
+                  <h2 className="text-xl font-semibold text-yellow-400">Route Alerts</h2>
                   <button
                     onClick={() => setShowRouteAlerts(!showRouteAlerts)}
                     className="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded"
                   >
-                    {showRouteAlerts ? "Hide" : "Show"}
+                    {showRouteAlerts ? 'Hide' : 'Show'}
                   </button>
                 </div>
                 <p className="text-gray-300">
-                  Shows 911 calls within 0.2 miles of points along your selected
-                  route.
+                  Shows 911 calls within 0.2 miles of points along your selected route.
                 </p>
               </div>
             )}
@@ -772,7 +640,6 @@ export default function MySafeRoutes() {
                   startLocation={startLocation}
                   endLocation={endLocation}
                   expandedRouteIndex={expandedRouteIndex}
-                  allRoutes={routes}
                 />
               </div>
             )}

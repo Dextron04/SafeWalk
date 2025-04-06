@@ -1,97 +1,156 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import chart from '../assets/output.png'; // Your pie chart image
+import { Bar } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 export default function Statics() {
+  const [chartData, setChartData] = useState({
+    labels: [],
+    datasets: [
+      {
+        label: '911 Calls by Type of Crime',
+        data: [],
+        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+        borderColor: 'rgb(255, 99, 132)',
+        borderWidth: 1,
+      },
+    ],
+  });
+
+  const fetchCrimeData = async () => {
+    const API_URL = `http://localhost:5000/api/911calls`;
+
+    try {
+      const response = await fetch(API_URL);
+      const data = await response.json();
+
+      const crimeCounts = {};
+      data.calls.forEach(call => {
+        const type = call.callType || 'Unknown';
+        crimeCounts[type] = (crimeCounts[type] || 0) + 1;
+      });
+
+      const sortedTypes = Object.entries(crimeCounts).sort((a, b) => b[1] - a[1]);
+      const labels = sortedTypes.map(([type]) => type);
+      const counts = sortedTypes.map(([, count]) => count);
+
+      setChartData({
+        labels,
+        datasets: [
+          {
+            label: '911 Calls by Type of Crime',
+            data: counts,
+            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+            borderColor: 'rgb(255, 99, 132)',
+            borderWidth: 1,
+          },
+        ],
+      });
+    } catch (error) {
+      console.error('Error fetching crime data:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchCrimeData();
+  }, []);
+
   return (
-    <div className="bg-gray-900 text-white min-h-screen p-10 font-sans">
-      <div className="max-w-5xl mx-auto space-y-12">
-        {/* Header */}
+    <div className="bg-gray-900 text-white min-h-screen p-5 sm:p-10 font-sans">
+      <div className="max-w-6xl mx-auto space-y-10 sm:space-y-12">
+        {/* Title */}
         <motion.h1
-          className="text-4xl text-yellow-400 font-extrabold text-center"
+          className="text-2xl sm:text-4xl text-yellow-400 font-extrabold text-center"
           initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          📊 Why SafeWalk Matters
+          📊 911 Call Trends (Past 30 Days)
         </motion.h1>
 
-        {/* U.S. Crisis */}
+        {/* Chart Section */}
         <motion.div
-          className="bg-gray-800 p-6 rounded-xl shadow-md space-y-3"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <h2 className="text-2xl text-yellow-300 font-semibold mb-2">🚶‍♂️ The U.S. Pedestrian Safety Crisis</h2>
-          <p>
-            The United States faces an unprecedented rise in pedestrian fatalities. In just the first half of 2024, over <span className="text-yellow-400 font-bold">3,300 people</span> were struck and killed — a <span className="text-red-400 font-bold">48% increase</span> since 2014.
-          </p>
-          <p>
-            Factors contributing to this rise include poor urban lighting, distracted driving, increased SUV usage, and insufficient pedestrian infrastructure. Areas like crosswalks, bus stops, and low-income neighborhoods are especially at risk.
-          </p>
-        </motion.div>
-
-        {/* Global Outlook */}
-        <motion.div
-          className="bg-gray-800 p-6 rounded-xl shadow-md space-y-3"
+          className="bg-gray-800 p-4 sm:p-6 rounded-xl shadow-md overflow-x-auto"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
-          <h2 className="text-2xl text-blue-300 font-semibold mb-2">🌍 How the World is Doing Better</h2>
-          <p>
-            Globally, countries like <span className="text-green-300 font-bold">Sweden, Norway, and the Netherlands</span> have prioritized pedestrian infrastructure, resulting in <span className="text-green-400 font-bold">near-zero fatalities</span> annually.
-          </p>
-          <p>
-            They use smart lighting, raised crosswalks, dedicated pedestrian lanes, and community reporting systems to improve urban walkability and safety.
-          </p>
+          <h2 className="text-xl sm:text-2xl text-blue-300 font-semibold mb-4">
+            🚨 911 Calls Made by Type of Crime
+          </h2>
+          <div className="w-[800px] sm:w-full">
+            <Bar
+              data={chartData}
+              options={{
+                responsive: true,
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                plugins: {
+                  title: {
+                    display: true,
+                    text: '911 Calls Grouped by Crime Type (Last 30 Days)',
+                  },
+                  tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                  },
+                  legend: {
+                    display: false
+                  }
+                },
+                scales: {
+                  x: {
+                    beginAtZero: true,
+                    title: {
+                      display: true,
+                      text: 'Number of Calls',
+                    },
+                  },
+                  y: {
+                    ticks: {
+                      font: {
+                        size: 10,
+                      },
+                    },
+                  },
+                },
+              }}
+              height={400}
+            />
+          </div>
         </motion.div>
 
-        {/* Chart */}
-        <div className="text-center">
-          <img
-            src={chart}
-            alt="US vs Global Pedestrian Deaths"
-            className="rounded-xl shadow-lg border border-gray-600 max-w-full mx-auto"
-          />
-          <p className="text-sm text-gray-400 mt-2">Pedestrian deaths comparison (U.S. vs Global Average)</p>
-        </div>
-
-        {/* SafeWalk Impact */}
+        {/* Info Section */}
         <motion.div
-          className="bg-gray-800 p-6 rounded-xl shadow-md space-y-3"
+          className="bg-gray-800 p-4 sm:p-6 rounded-xl shadow-md space-y-3"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
         >
-          <h2 className="text-2xl text-green-300 font-semibold mb-2">📈 How SafeWalk Helps</h2>
-          <ul className="list-disc list-inside text-gray-300 space-y-1">
+          <h2 className="text-xl sm:text-2xl text-green-300 font-semibold mb-2">📈 How SafeWalk Helps</h2>
+          <ul className="list-disc list-inside text-gray-300 space-y-1 text-sm sm:text-base">
             <li><span className="text-yellow-400 font-semibold">20,000+</span> crowd-sourced safety alerts in 2024</li>
             <li><span className="text-yellow-400 font-semibold">500+</span> verified safe zones marked with real-time data</li>
             <li><span className="text-yellow-400 font-semibold">12+</span> cities actively using SafeWalk for night walk tracking</li>
             <li><span className="text-yellow-400 font-semibold">30%</span> community risk reduction in beta test areas</li>
           </ul>
-          <p className="text-gray-400 pt-2">
+          <p className="text-gray-400 pt-2 text-sm sm:text-base">
             SafeWalk bridges the gap between data and decision-making, giving users the power to choose safer paths backed by real-time insights.
           </p>
         </motion.div>
 
-        {/* Call-to-Action */}
-        <motion.div
-          className="bg-gray-800 p-6 rounded-xl shadow-md space-y-3 text-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-        >
-          <h2 className="text-2xl text-purple-300 font-semibold mb-2">🔍 What’s Next?</h2>
-          <p>
-            Our mission doesn’t stop here. We're actively working on integrating AI to predict high-risk zones before incidents occur, as well as partnering with city governments to improve urban safety.
-          </p>
-          <p className="text-green-400 font-bold">Together, we can walk without fear.</p>
-        </motion.div>
-
         {/* Footer */}
-        <footer className="text-center text-gray-500 pt-8 border-t border-gray-700 text-sm">
-          Sources: GHSA (2024), WHO Urban Safety Report, Vision Zero | Built for awareness by SafeWalk 💛
+        <footer className="text-center text-gray-500 pt-8 border-t border-gray-700 text-xs sm:text-sm">
+          Source: San Francisco 911 Open Data | Built with 💛 by SafeWalk
         </footer>
       </div>
     </div>
