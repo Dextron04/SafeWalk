@@ -29,15 +29,28 @@ export default function AlertFeed() {
         setLoading(true);
 
         console.log('Fetching 911 calls from server API');
-        console.log(import.meta.env.VITE_API_URL);
+        console.log('API URL:', import.meta.env.VITE_API_URL);
         
+        // Add more detailed error logging
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/911calls?format=calls`, {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+        });
         
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/911calls?format=calls`);
-        if (!response.ok) throw new Error('Failed to fetch 911 calls');
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`API Error (${response.status}): ${errorText}`);
+          throw new Error(`Failed to fetch 911 calls: ${response.status} ${response.statusText}`);
+        }
+        
         const data = await response.json();
-        setAlerts(data.calls);
+        console.log('Data received:', data);
+        setAlerts(data.calls || []);
       } catch (err) {
-        setError('Failed to load 911 call data. Please try again later.');
+        console.error('Error details:', err);
+        setError(`Failed to load 911 call data: ${err.message}`);
       } finally {
         setLoading(false);
       }
