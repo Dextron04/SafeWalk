@@ -254,7 +254,7 @@ export default function MySafeRoutes() {
       } else {
         const script = document.createElement("script");
         // Use a direct API key value
-        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyAbhHlHyUaD3PLPfLolagQWQrcfeZO4fHA&libraries=places`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.GOOGLE_API_KEY}&libraries=places`;
         script.async = true;
         script.defer = true;
         script.onload = initAutocomplete;
