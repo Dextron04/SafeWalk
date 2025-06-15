@@ -253,7 +253,6 @@ export default function MySafeRoutes() {
         initAutocomplete();
       } else {
         const script = document.createElement("script");
-        console.log(import.meta.env.VITE_GOOGLE_API_KEY);
         // Use a direct API key value
         script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_API_KEY}&libraries=places`;
         script.async = true;
