@@ -253,8 +253,9 @@ export default function MySafeRoutes() {
         initAutocomplete();
       } else {
         const script = document.createElement("script");
+        console.log(import.meta.env.VITE_GOOGLE_API_KEY);
         // Use a direct API key value
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.GOOGLE_API_KEY}&libraries=places`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_API_KEY}&libraries=places`;
         script.async = true;
         script.defer = true;
         script.onload = initAutocomplete;
@@ -481,8 +482,7 @@ export default function MySafeRoutes() {
 
       const alertCount = nearbyAlerts.length;
       console.log(
-        `Found ${alertCount} 911 calls along route ${
-          routeIndex !== null ? routeIndex : "selected"
+        `Found ${alertCount} 911 calls along route ${routeIndex !== null ? routeIndex : "selected"
         }`
       );
 
@@ -561,7 +561,7 @@ export default function MySafeRoutes() {
         <h1 className="text-2xl sm:text-3xl font-bold text-yellow-400 mb-3 sm:mb-6">
           🚍 SF Transit Directions
         </h1>
-        
+
         {/* Form - Responsive but maintains desktop layout */}
         <form
           onSubmit={handleFindRoute}
@@ -607,7 +607,7 @@ export default function MySafeRoutes() {
                 attribution="&copy; OpenStreetMap contributors"
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              
+
               {userLocation && (
                 <>
                   <Marker position={[userLocation.lat, userLocation.lng]}>
@@ -714,10 +714,9 @@ export default function MySafeRoutes() {
                               handleRouteSelect(index);
                             }}
                             className={`px-3 sm:px-4 py-2 text-sm font-medium rounded-lg shadow-lg transition-all duration-300 flex-1 sm:flex-none
-                              ${
-                                selectedRouteIndex === index
-                                  ? "bg-gradient-to-r from-emerald-400 to-teal-500 text-white transform scale-105 border-2 border-emerald-300"
-                                  : "bg-gray-800 hover:bg-gray-700 text-gray-200 hover:text-white border-2 border-gray-700 hover:border-teal-500"
+                              ${selectedRouteIndex === index
+                                ? "bg-gradient-to-r from-emerald-400 to-teal-500 text-white transform scale-105 border-2 border-emerald-300"
+                                : "bg-gray-800 hover:bg-gray-700 text-gray-200 hover:text-white border-2 border-gray-700 hover:border-teal-500"
                               }
                               hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-teal-500 active:scale-95`}
                           >
@@ -734,11 +733,10 @@ export default function MySafeRoutes() {
                             aria-label="Toggle route details"
                           >
                             <span
-                              className={`font-medium transition-transform duration-300 inline-block ${
-                                expandedRouteIndex === index
-                                  ? "transform rotate-180"
-                                  : ""
-                              }`}
+                              className={`font-medium transition-transform duration-300 inline-block ${expandedRouteIndex === index
+                                ? "transform rotate-180"
+                                : ""
+                                }`}
                             >
                               ▼
                             </span>
@@ -746,7 +744,7 @@ export default function MySafeRoutes() {
                           </button>
                         </div>
                       </div>
-                      
+
                       {/* Route details section - add back the content */}
                       {expandedRouteIndex === index && (
                         <div className="p-3 sm:p-4 border-t border-gray-700">
