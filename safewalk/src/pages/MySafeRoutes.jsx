@@ -566,15 +566,39 @@ export default function MySafeRoutes() {
           onSubmit={handleFindRoute}
           className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 sm:mb-6"
         >
-          <input
-            ref={originInputRef}
-            type="text"
-            placeholder="Start Location"
-            value={origin}
-            onChange={(e) => setOrigin(e.target.value)}
-            className="p-3 bg-gray-800 rounded text-white flex-1"
-            required
-          />
+          <div className="flex flex-row gap-2 flex-1">
+            <input
+              ref={originInputRef}
+              type="text"
+              placeholder="Start Location"
+              value={origin}
+              onChange={(e) => setOrigin(e.target.value)}
+              className="p-3 bg-gray-800 rounded text-white flex-1"
+              required
+            />
+            <button
+              type="button"
+              onClick={async () => {
+                if (userLocation && window.google && window.google.maps) {
+                  const geocoder = new window.google.maps.Geocoder();
+                  const latlng = { lat: userLocation.lat, lng: userLocation.lng };
+                  geocoder.geocode({ location: latlng }, (results, status) => {
+                    if (status === "OK" && results[0]) {
+                      setOrigin(results[0].formatted_address);
+                    } else {
+                      alert("Could not determine address from your location.");
+                    }
+                  });
+                } else {
+                  alert("User location not available or Google Maps not loaded.");
+                }
+              }}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold px-4 py-2 rounded"
+              style={{ minWidth: 'fit-content' }}
+            >
+              Use My Location
+            </button>
+          </div>
           <input
             ref={destinationInputRef}
             type="text"
